@@ -186,9 +186,11 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
         }
         .receipt-table {
           width: 100%;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
           margin-bottom: ${isPurchase ? '25px' : '12px'};
-          border: 1.5px solid #ddd;
+          border-top: 1.5px solid #ddd;
+          border-right: 1.5px solid #ddd;
           background: white;
         }
         .receipt-table tr:nth-child(even) {
@@ -198,24 +200,26 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
           background: #800000 !important;
           background-color: #800000 !important;
           color: white !important;
-          padding: ${isPurchase ? '12px' : '10px'};
+          padding: ${isPurchase ? '16px 12px' : '14px 10px'};
           text-align: center;
           vertical-align: middle;
-          border: 1px solid #ddd;
+          border-bottom: 1.5px solid #ddd;
+          border-left: 1.5px solid #ddd;
           font-size: ${isPurchase ? '18px' : '16px'};
           font-weight: bold;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
-          line-height: 1.2;
+          line-height: 1.8 !important;
         }
         .receipt-table td {
-          padding: ${isPurchase ? '8px 12px' : '6px 10px'};
+          padding: ${isPurchase ? '12px 12px' : '10px 10px'};
           text-align: right;
           vertical-align: middle;
-          border: 1px solid #ddd;
+          border-bottom: 1.5px solid #ddd;
+          border-left: 1.5px solid #ddd;
           font-size: ${isPurchase ? '16px' : '14px'};
           color: #333;
-          line-height: 1.2;
+          line-height: 1.8 !important;
         }
         .summary-table {
           width: ${isPurchase ? '320px' : '260px'};
@@ -261,7 +265,7 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
 
         .font-nastaliq {
           font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
-          line-height: 1.6;
+          line-height: 1.8 !important;
         }
         .info-grid {
           display: grid;

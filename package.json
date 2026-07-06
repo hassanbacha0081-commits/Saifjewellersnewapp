@@ -44,7 +44,7 @@
   },
   "build": {
     "appId": "com.nafeesjewellers.app",
-    "productName": "Nafees Jewellers",
+    "productName": "Saif jeweller's",
     "directories": {
       "output": "dist_electron"
     },
