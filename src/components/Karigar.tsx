@@ -403,26 +403,47 @@ export default function Karigar({ lang }: KarigarProps) {
         </div>
         
         <div className="mt-6 space-y-3">
-          <label className="text-sm text-zinc-500 urdu-text block text-right pr-2">{t.karigarLabels.labReport}</label>
+          <label className="text-sm text-zinc-500 urdu-text block text-right pr-2">{lang === 'ur' ? 'تصویر منسلک کریں (Attach Image)' : 'Attach Image'}</label>
           <div className="flex flex-col gap-4">
-            <div className="w-full">
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="camera"
-                onChange={handleFileChange}
-                className="hidden"
-                id="karigarCameraInput"
-              />
-              <label 
-                htmlFor="karigarCameraInput"
-                className="w-full min-h-[80px] flex items-center justify-center gap-3 p-4 border-2 border-dashed border-sky-200 rounded-xl text-zinc-400 cursor-pointer hover:border-gold hover:text-gold transition-all bg-white"
-              >
-                <Camera size={26} />
-                <span className="urdu-text text-lg">
-                  {currentImg ? (lang === 'ur' ? 'تصویر تبدیل کریں' : 'Change Image') : t.captureImage}
-                </span>
-              </label>
+            <div className="w-full grid grid-cols-2 gap-3">
+              <div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="karigarCameraInput"
+                />
+                <label 
+                  htmlFor="karigarCameraInput"
+                  className="w-full min-h-[70px] flex flex-col items-center justify-center gap-1 p-3 border-2 border-dashed border-sky-200 rounded-xl text-zinc-400 cursor-pointer hover:border-gold hover:text-gold transition-all bg-white text-center"
+                >
+                  <Camera size={20} />
+                  <span className="urdu-text text-sm">
+                    {lang === 'ur' ? 'کیمرہ (Camera)' : 'Camera'}
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="karigarGalleryInput"
+                />
+                <label 
+                  htmlFor="karigarGalleryInput"
+                  className="w-full min-h-[70px] flex flex-col items-center justify-center gap-1 p-3 border-2 border-dashed border-sky-200 rounded-xl text-zinc-400 cursor-pointer hover:border-gold hover:text-gold transition-all bg-white text-center"
+                >
+                  <ImageIcon size={20} />
+                  <span className="urdu-text text-sm">
+                    {lang === 'ur' ? 'گیلری (Gallery)' : 'Gallery'}
+                  </span>
+                </label>
+              </div>
             </div>
 
             {currentImg && (

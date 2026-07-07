@@ -425,23 +425,42 @@ export default function Stock({ lang }: StockProps) {
                   </button>
                 </div>
               ) : (
-                <>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="camera"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="stockCameraInput"
-                  />
-                  <label 
-                    htmlFor="stockCameraInput"
-                    className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex items-center justify-center gap-2 cursor-pointer hover:border-gold hover:text-gold transition-all"
-                  >
-                    <Camera size={20} />
-                    <span className="urdu-text">{t.captureImage}</span>
-                  </label>
-                </>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="stockCameraInput"
+                    />
+                    <label 
+                      htmlFor="stockCameraInput"
+                      className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-gold hover:text-gold transition-all text-center min-h-[60px]"
+                    >
+                      <Camera size={18} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'کیمرہ' : 'Camera'}</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="stockGalleryInput"
+                    />
+                    <label 
+                      htmlFor="stockGalleryInput"
+                      className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-gold hover:text-gold transition-all text-center min-h-[60px]"
+                    >
+                      <ImageIcon size={18} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'گیلری' : 'Gallery'}</span>
+                    </label>
+                  </div>
+                </div>
               )}
             </div>
             <div className="flex gap-2 pt-6">

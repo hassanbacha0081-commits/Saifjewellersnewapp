@@ -363,7 +363,7 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                       <img 
                         src={item.img} 
                         alt="" 
-                        style={{ height: '85px', maxHeight: '85px', width: 'auto', maxWidth: '100%', objectFit: 'contain', margin: '0 auto' }} 
+                        style={{ height: '102px', maxHeight: '102px', width: 'auto', maxWidth: '100%', objectFit: 'contain', margin: '0 auto' }} 
                         className="rounded border border-zinc-200 shadow-sm"
                       />
                     ) : (

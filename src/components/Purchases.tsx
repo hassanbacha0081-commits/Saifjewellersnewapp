@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { db, type GoldPurchase } from '../db';
 import { translations, type Language } from '../translations';
-import { Save, Printer, Camera, RotateCcw } from 'lucide-react';
+import { Save, Printer, Camera, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { PrintReceipt } from './PrintReceipt';
 import html2canvas from 'html2canvas';
@@ -35,7 +35,8 @@ export default function Purchases({ lang }: PurchasesProps) {
   const [shopPhone2, setShopPhone2] = useState('');
 
   const componentRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Persistence to handle page reloads during image capture on mobile
   useEffect(() => {
@@ -306,33 +307,60 @@ export default function Purchases({ lang }: PurchasesProps) {
 
               <div className="space-y-4 pt-4">
                 <div className="flex items-center justify-between">
-                  <label className={`text-sm font-bold text-zinc-700 ml-1 ${isUrdu ? 'urdu-text' : ''}`}>{t.captureImage}</label>
+                  <label className={`text-sm font-bold text-zinc-700 ml-1 ${isUrdu ? 'urdu-text' : ''}`}>{isUrdu ? 'تصویر منسلک کریں (Attach Image)' : 'Attach Image'}</label>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-6">
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full sm:w-40 h-40 border-2 border-dashed border-sky-100 rounded-3xl flex flex-col items-center justify-center text-sky-400 hover:text-gold hover:border-gold hover:bg-gold/5 transition-all group shrink-0"
-                  >
-                    <div className="bg-white p-4 rounded-2xl group-hover:bg-gold group-hover:text-black transition-colors">
-                      <Camera size={32} />
-                    </div>
-                    <span className={`text-xs font-bold mt-3 ${isUrdu ? 'urdu-text' : ''}`}>{img ? t.retakeImage : t.captureImage}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-4 w-full sm:w-auto shrink-0">
+                    <button 
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-28 sm:w-32 h-32 border-2 border-dashed border-sky-100 rounded-3xl flex flex-col items-center justify-center text-sky-400 hover:text-gold hover:border-gold hover:bg-gold/5 transition-all group shrink-0"
+                    >
+                      <div className="bg-white p-2 rounded-2xl text-sky-500 transition-colors">
+                        <Camera size={20} />
+                      </div>
+                      <span className={`text-[10px] font-bold mt-2 ${isUrdu ? 'urdu-text' : ''}`}>
+                        {isUrdu ? 'کیمرہ (Camera)' : 'Camera'}
+                      </span>
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="w-28 sm:w-32 h-32 border-2 border-dashed border-sky-100 rounded-3xl flex flex-col items-center justify-center text-sky-400 hover:text-gold hover:border-gold hover:bg-gold/5 transition-all group shrink-0"
+                    >
+                      <div className="bg-white p-2 rounded-2xl text-sky-500 transition-colors">
+                        <ImageIcon size={20} />
+                      </div>
+                      <span className={`text-[10px] font-bold mt-2 ${isUrdu ? 'urdu-text' : ''}`}>
+                        {isUrdu ? 'گیلری (Gallery)' : 'Gallery'}
+                      </span>
+                    </button>
+                  </div>
+
                   {img && (
                     <div 
                       onClick={() => setLightboxImage(img)}
-                      className="h-40 flex-1 rounded-3xl bg-sky-50 overflow-hidden border border-sky-100 shadow-inner group relative cursor-pointer"
+                      className="h-32 flex-1 rounded-3xl bg-sky-50 overflow-hidden border border-sky-100 shadow-inner group relative cursor-pointer"
                       title={isUrdu ? 'بڑی تصویر دیکھیں' : 'View Large Image'}
                     >
                       <img src={img} alt="Gold Image" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 hover:opacity-95" />
                     </div>
                   )}
+
                   <input 
                     type="file" 
                     accept="image/*" 
                     capture="environment"
-                    ref={fileInputRef}
+                    ref={cameraInputRef}
+                    className="hidden"
+                    onChange={handleImageCapture}
+                  />
+
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={galleryInputRef}
                     className="hidden"
                     onChange={handleImageCapture}
                   />

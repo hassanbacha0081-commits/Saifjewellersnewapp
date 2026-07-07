@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Repair } from '../db';
 import { translations, type Language } from '../translations';
 import { formatCurrency, formatDate, formatWhatsAppUrl, compressImage } from '../lib/utils';
-import { Plus, Check, Trash2, Clock, MessageCircle, Printer, Camera, RotateCcw, X, AlertTriangle, Download, AlertCircle, Search } from 'lucide-react';
+import { Plus, Check, Trash2, Clock, MessageCircle, Printer, Camera, RotateCcw, X, AlertTriangle, Download, AlertCircle, Search, Image as ImageIcon } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -395,24 +395,43 @@ export default function Repairs({ lang }: RepairsProps) {
               />
             </div>
             <div className="mt-4 space-y-3">
-              <label className="text-sm font-medium text-zinc-500 mb-1 urdu-text">تصویر (کیمرہ):</label>
+              <label className="text-sm font-medium text-zinc-500 mb-1 urdu-text">{lang === 'ur' ? 'تصویر منسلک کریں (Attach Image):' : 'Attach Image:'}</label>
               <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="camera"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="repairsCameraInput"
-                  />
-                  <label 
-                    htmlFor="repairsCameraInput"
-                    className="w-full min-h-[50px] flex items-center justify-center gap-2 p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 cursor-pointer hover:border-gold hover:text-gold transition-all bg-sky-50"
-                  >
-                    <Camera size={20} />
-                    <span className="urdu-text">{currentImg ? (lang === 'ur' ? 'تصویر تبدیل کریں' : 'Change Image') : t.captureImage}</span>
-                  </label>
+                <div className="flex-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="repairsCameraInput"
+                    />
+                    <label 
+                      htmlFor="repairsCameraInput"
+                      className="w-full min-h-[60px] flex flex-col items-center justify-center gap-1 p-2 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 cursor-pointer hover:border-gold hover:text-gold transition-all bg-sky-50 text-center"
+                    >
+                      <Camera size={18} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'کیمرہ' : 'Camera'}</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="repairsGalleryInput"
+                    />
+                    <label 
+                      htmlFor="repairsGalleryInput"
+                      className="w-full min-h-[60px] flex flex-col items-center justify-center gap-1 p-2 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 cursor-pointer hover:border-gold hover:text-gold transition-all bg-sky-50 text-center"
+                    >
+                      <ImageIcon size={18} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'گیلری' : 'Gallery'}</span>
+                    </label>
+                  </div>
                 </div>
 
                 {currentImg && (

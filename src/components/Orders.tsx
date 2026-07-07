@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Order } from '../db';
 import { translations, type Language } from '../translations';
 import { formatCurrency, formatDate, formatWhatsAppUrl, compressImage } from '../lib/utils';
-import { Plus, Check, Trash2, Camera, RotateCcw, MessageCircle, Printer, X, Download, AlertCircle } from 'lucide-react';
+import { Plus, Check, Trash2, Camera, RotateCcw, MessageCircle, Printer, X, Download, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
@@ -668,22 +668,41 @@ export default function Orders({ lang }: OrdersProps) {
                   </button>
                 </div>
               ) : (
-                <div className="max-w-sm mx-auto">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="camera"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="ordersCameraInput"
-                  />
-                  <label 
-                    htmlFor="ordersCameraInput"
-                    className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex items-center justify-center gap-2 cursor-pointer hover:border-gold hover:text-gold transition-all"
-                  >
-                    <Camera size={18} />
-                    <span className="urdu-text text-sm">{t.captureImage}</span>
-                  </label>
+                <div className="max-w-sm mx-auto grid grid-cols-2 gap-3">
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="ordersCameraInput"
+                    />
+                    <label 
+                      htmlFor="ordersCameraInput"
+                      className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-gold hover:text-gold transition-all text-center min-h-[60px]"
+                    >
+                      <Camera size={16} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'کیمرہ' : 'Camera'}</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="ordersGalleryInput"
+                    />
+                    <label 
+                      htmlFor="ordersGalleryInput"
+                      className="w-full p-3 border-2 border-dashed border-sky-200 rounded-lg text-zinc-500 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-gold hover:text-gold transition-all text-center min-h-[60px]"
+                    >
+                      <ImageIcon size={16} />
+                      <span className="urdu-text text-xs">{lang === 'ur' ? 'گیلری' : 'Gallery'}</span>
+                    </label>
+                  </div>
                 </div>
               )}
             </div>

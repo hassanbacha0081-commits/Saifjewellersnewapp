@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db, type Sale, type SalesItem } from '../db';
 import { translations, type Language } from '../translations';
 import { formatDate, compressImage } from '../lib/utils';
-import { Camera, RotateCcw, Trash2, Printer, Plus, X, ShoppingBag, Download, AlertCircle, CheckCircle2, Users } from 'lucide-react';
+import { Camera, RotateCcw, Trash2, Printer, Plus, X, ShoppingBag, Download, AlertCircle, CheckCircle2, Users, Image as ImageIcon } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { AnimatePresence, motion } from 'motion/react';
 import html2canvas from 'html2canvas';
@@ -624,28 +624,53 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
 
             <div className="space-y-6 pt-4">
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-1">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="item-image"
-                  />
-                  <label
-                    htmlFor="item-image"
-                    className="w-full h-full min-h-[140px] flex flex-col items-center justify-center gap-3 px-6 py-6 rounded-3xl border-2 border-dashed border-sky-200 text-sky-400 hover:border-gold hover:text-gold hover:bg-gold/5 transition-all cursor-pointer bg-sky-50"
-                  >
-                    <div className="p-4 bg-white rounded-2xl shadow-sm group-hover:bg-gold group-hover:text-black transition-colors">
-                      <Camera size={32} />
-                    </div>
-                    <span className="font-bold urdu-text">{lastImg ? (lang === 'ur' ? 'تصویر تبدیل کریں' : 'Change Image') : (lang === 'ur' ? 'تصویر لیں' : 'Take Photo')}</span>
-                  </label>
+                <div className="flex-1 grid grid-cols-1 xs:grid-cols-2 gap-4">
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="item-image-camera"
+                    />
+                    <label
+                      htmlFor="item-image-camera"
+                      className="w-full h-full min-h-[140px] flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-3xl border-2 border-dashed border-sky-200 text-sky-400 hover:border-gold hover:text-gold hover:bg-gold/5 transition-all cursor-pointer bg-sky-50 text-center"
+                    >
+                      <div className="p-3 bg-white rounded-2xl shadow-sm text-sky-500 transition-colors">
+                        <Camera size={24} />
+                      </div>
+                      <span className="font-bold urdu-text text-xs">
+                        {lang === 'ur' ? 'کیمرہ (Take Photo)' : 'Take Photo'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="item-image-gallery"
+                    />
+                    <label
+                      htmlFor="item-image-gallery"
+                      className="w-full h-full min-h-[140px] flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-3xl border-2 border-dashed border-sky-200 text-sky-400 hover:border-gold hover:text-gold hover:bg-gold/5 transition-all cursor-pointer bg-sky-50 text-center"
+                    >
+                      <div className="p-3 bg-white rounded-2xl shadow-sm text-sky-500 transition-colors">
+                        <ImageIcon size={24} />
+                      </div>
+                      <span className="font-bold urdu-text text-xs">
+                        {lang === 'ur' ? 'گیلری (Choose Gallery)' : 'Choose Gallery'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 {lastImg && (
-                  <div className="relative w-full sm:w-40 h-40 rounded-3xl overflow-hidden border border-sky-200 shadow-xl animate-in zoom-in-95 duration-500 group cursor-pointer" onClick={() => setLightboxImage(lastImg)}>
+                  <div className="relative w-full sm:w-48 h-48 rounded-3xl overflow-hidden border border-sky-200 shadow-xl animate-in zoom-in-95 duration-500 group cursor-pointer" onClick={() => setLightboxImage(lastImg)}>
                     <img src={lastImg} alt="Preview" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <button 
                       onClick={(e) => { e.stopPropagation(); setLastImg(null); }}
@@ -689,7 +714,7 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
                       {item.img && (
                         <div 
                           onClick={() => setLightboxImage(item.img!)}
-                          className="w-14 h-14 rounded-xl overflow-hidden border border-sky-100 flex-shrink-0 shadow-sm cursor-pointer hover:border-gold duration-200 transition-colors"
+                          className="w-[68px] h-[68px] rounded-xl overflow-hidden border border-sky-100 flex-shrink-0 shadow-sm cursor-pointer hover:border-gold duration-200 transition-colors"
                           title={lang === 'ur' ? 'تصویر دیکھیں' : 'View Image'}
                         >
                           <img src={item.img} alt={item.n} className="w-full h-full object-cover" />
