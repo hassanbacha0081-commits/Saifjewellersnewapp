@@ -30,6 +30,7 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
   const [formData, setFormData] = useState({
     cName: '',
     cPhone: '',
+    tolaRate: 0,
     iRate: 0,
     iName: '',
     iWt: 0,
@@ -161,10 +162,12 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
 
   useEffect(() => {
     if (editingSale) {
+      const rate = editingSale.items[0]?.r || 0;
       setFormData({
         cName: editingSale.name,
         cPhone: editingSale.phone,
-        iRate: editingSale.items[0]?.r || 0,
+        tolaRate: rate ? Number((rate * 12).toFixed(2)) : 0,
+        iRate: rate,
         iName: '',
         iWt: 0,
         iQty: 1,
@@ -184,6 +187,7 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
     setFormData({
       cName: '',
       cPhone: '',
+      tolaRate: 0,
       iRate: 0,
       iName: '',
       iWt: 0,
@@ -536,17 +540,38 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
             </div>
             
             <div className="pt-4 border-t border-sky-50">
-              <div className="space-y-2 max-w-sm">
-                <label className="text-sm font-bold text-zinc-700 ml-1 urdu-text">{t.goldRate}</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.iRate || ''}
-                    placeholder="0.00"
-                    onChange={e => setFormData({ ...formData, iRate: Number(e.target.value) })}
-                    className="w-full pl-6 pr-12 py-5 bg-sky-900 text-gold border-none rounded-2xl focus:ring-4 focus:ring-gold/20 outline-none transition-all text-3xl font-black shadow-inner tracking-widest"
-                  />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-zinc-500 text-xs">PKR</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700 ml-1 urdu-text">{lang === 'ur' ? 'ریٹ فی تولہ' : 'Price per Tola'}</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.tolaRate || ''}
+                      placeholder="0.00"
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setFormData({ ...formData, tolaRate: val, iRate: val ? Number((val / 12).toFixed(2)) : 0 });
+                      }}
+                      className="w-full pl-6 pr-12 py-5 bg-sky-900 text-gold border-none rounded-2xl focus:ring-4 focus:ring-gold/20 outline-none transition-all text-2xl font-black shadow-inner tracking-widest"
+                    />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-zinc-500 text-xs">PKR</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700 ml-1 urdu-text">{lang === 'ur' ? 'ریٹ فی گرام' : 'Price per Gram'}</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.iRate || ''}
+                      placeholder="0.00"
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setFormData({ ...formData, iRate: val, tolaRate: val ? Number((val * 12).toFixed(2)) : 0 });
+                      }}
+                      className="w-full pl-6 pr-12 py-5 bg-sky-900 text-gold border-none rounded-2xl focus:ring-4 focus:ring-gold/20 outline-none transition-all text-2xl font-black shadow-inner tracking-widest"
+                    />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-zinc-500 text-xs">PKR</span>
+                  </div>
                 </div>
               </div>
             </div>
