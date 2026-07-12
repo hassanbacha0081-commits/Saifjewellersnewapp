@@ -37,6 +37,7 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: number, type: 'sale' | 'purchase' } | null>(null);
+  const [expandedSales, setExpandedSales] = useState<Record<number, boolean>>({});
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
@@ -410,6 +411,50 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                       <span className="font-bold text-red-600">Rs. {sale.rem.toLocaleString()}</span>
                     </div>
                   </div>
+
+                  {sale.items && sale.items.length > 0 && (
+                    <div className="pt-2 border-t border-sky-100">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSales(prev => ({ ...prev, [sale.id!]: !prev[sale.id!] }))}
+                        className="w-full flex items-center justify-between text-xs text-sky-600 hover:text-sky-800 font-bold py-1 urdu-text"
+                      >
+                        <span>{expandedSales[sale.id!] ? (isUrdu ? 'آئٹمز چھپائیں' : 'Hide Items') : (isUrdu ? 'آئٹمز دیکھیں' : 'View Items')} ({sale.items.length})</span>
+                        <span className="text-[10px] bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
+                          {expandedSales[sale.id!] ? '▲' : '▼'}
+                        </span>
+                      </button>
+
+                      {expandedSales[sale.id!] && (
+                        <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                          {sale.items.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center p-2 bg-sky-50/50 rounded-lg border border-sky-100/50">
+                              {item.img && (
+                                <div 
+                                  onClick={() => setViewImage(item.img!)}
+                                  className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 border border-sky-200 cursor-pointer hover:border-gold hover:scale-105 transition-all"
+                                  title={isUrdu ? "تصویر دیکھیں اور ڈاؤنلوڈ کریں" : "View and Download Image"}
+                                >
+                                  <img src={item.img} alt={item.n} className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-zinc-800 truncate urdu-text">{item.n}</p>
+                                <p className="text-[10px] text-zinc-500 font-mono">
+                                  {item.q} Pcs | {item.w}g @ {item.r.toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xs font-black ${item.t < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
+                                  {item.t < 0 ? '-' : ''}Rs. {Math.abs(item.t).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 pt-2">
                     <button

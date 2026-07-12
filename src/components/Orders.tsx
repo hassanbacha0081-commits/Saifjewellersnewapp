@@ -172,6 +172,7 @@ export default function Orders({ lang }: OrdersProps) {
   const [qistOrderId, setQistOrderId] = useState<number | null>(null);
   const [qistAmount, setQistAmount] = useState<string>('');
   const [selectedOrderForQist, setSelectedOrderForQist] = useState<Order | null>(null);
+  const [deleteQistIndex, setDeleteQistIndex] = useState<number | null>(null);
 
   const orders = useLiveQuery(() => {
     if (!db.orders) return Promise.resolve([]);
@@ -330,6 +331,27 @@ export default function Orders({ lang }: OrdersProps) {
     setSelectedOrderForQist(null);
   };
 
+  const handleDeleteQist = (indexToDelete: number) => {
+    setDeleteQistIndex(indexToDelete);
+  };
+
+  const confirmDeleteQist = async (indexToDelete: number) => {
+    if (!selectedOrderForQist || !qistOrderId) return;
+
+    const paymentToDelete = selectedOrderForQist.payments[indexToDelete];
+    const newPayments = selectedOrderForQist.payments.filter((_, i) => i !== indexToDelete);
+    const newRem = selectedOrderForQist.rem + paymentToDelete.amt;
+
+    await db.orders.update(qistOrderId, { payments: newPayments, rem: newRem });
+    
+    setSelectedOrderForQist({
+      ...selectedOrderForQist,
+      payments: newPayments,
+      rem: newRem
+    });
+    setDeleteQistIndex(null);
+  };
+
   const sendWS = (num: string, name: string, rem: number) => {
     const msg = `اسلام علیکم ${name}! ${APP_CONFIG.shopNameUrdu} سے آپ کا آرڈر تیار ہے۔ آپ کا بقایا ${rem} روپے ہے۔ شکریہ۔`;
     const url = formatWhatsAppUrl(num, msg);
@@ -349,6 +371,19 @@ export default function Orders({ lang }: OrdersProps) {
         onConfirm={() => deleteId && handleDelete(deleteId)}
         title={lang === 'ur' ? 'ڈیلیٹ کریں؟' : 'Confirm Delete'}
         message={lang === 'ur' ? 'کیا آپ واقعی اس آرڈر کو حذف کرنا چاہتے ہیں؟' : 'Are you sure you want to delete this order?'}
+        lang={lang}
+      />
+
+      <ConfirmModal 
+        isOpen={deleteQistIndex !== null}
+        onClose={() => setDeleteQistIndex(null)}
+        onConfirm={() => {
+          if (deleteQistIndex !== null) {
+            confirmDeleteQist(deleteQistIndex);
+          }
+        }}
+        title={lang === 'ur' ? 'قسط ڈیلیٹ کریں؟' : 'Delete Installment?'}
+        message={lang === 'ur' ? 'کیا آپ واقعی اس قسط کو حذف کرنا چاہتے ہیں؟' : 'Are you sure you want to delete this installment?'}
         lang={lang}
       />
 
@@ -401,9 +436,19 @@ export default function Orders({ lang }: OrdersProps) {
                     <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider urdu-text">ادائیگیوں کی تاریخ:</label>
                     <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
                       {selectedOrderForQist.payments.map((p, i) => (
-                        <div key={i} className="flex justify-between text-xs p-2 bg-sky-50 rounded-lg border border-sky-100">
+                        <div key={i} className="flex justify-between items-center text-xs p-2 bg-sky-50 rounded-lg border border-sky-100 group">
                           <span className="text-zinc-500">{p.date}</span>
-                          <span className="font-bold text-green-600">{formatCurrency(p.amt)}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-green-600">{formatCurrency(p.amt)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteQist(i)}
+                              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                              title={lang === 'ur' ? 'حذف کریں' : 'Delete'}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

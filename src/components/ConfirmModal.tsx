@@ -17,7 +17,7 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, lang 
   const t = translations[lang];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black-60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black-60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-4 border-b flex justify-between items-center bg-red-50">
           <div className="flex items-center gap-2 text-red-600">

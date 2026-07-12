@@ -1,6 +1,9 @@
 import React from 'react';
-import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCw, Download } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 interface ImageLightboxProps {
   src: string;
@@ -21,12 +24,54 @@ export default function ImageLightbox({ src, onClose, title }: ImageLightboxProp
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const handleDownload = async () => {
+    if (!src) return;
+    
+    const filename = `Image_${Date.now()}`;
+    const extension = src.startsWith('data:image/') 
+      ? src.split(';')[0].split('/')[1]?.split('+')[0] || 'jpg' 
+      : 'jpg';
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const base64Data = src.includes(',') ? src.split(',')[1] : src;
+        const savedFile = await Filesystem.writeFile({
+          path: `${filename}.${extension}`,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: 'Download Image',
+          url: savedFile.uri,
+        });
+      } catch (e) {
+        console.error('Error sharing image', e);
+        alert("Error sharing/saving image");
+      }
+    } else {
+      const link = document.createElement('a');
+      link.href = src;
+      link.download = `${filename}.${extension}`;
+      link.click();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md animate-in fade-in duration-200">
       {/* Header */}
       <div className="absolute top-0 inset-x-0 bg-black/60 backdrop-blur-md p-4 flex justify-between items-center text-white z-10">
         <span className="font-bold text-sm tracking-wide font-sans">{title || 'Image Viewer | تصویر'}</span>
         <div className="flex items-center gap-4">
+          <button 
+            type="button"
+            onClick={handleDownload}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-gold hover:text-gold-light font-bold flex items-center gap-1"
+            title="Download / Save"
+          >
+            <Download size={20} />
+            <span className="text-xs hidden sm:inline">ڈاؤنلوڈ (Download)</span>
+          </button>
           <button 
             type="button"
             onClick={() => setScale(s => Math.min(s + 0.25, 3.5))}
