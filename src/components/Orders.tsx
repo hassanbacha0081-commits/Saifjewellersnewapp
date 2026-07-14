@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Order } from '../db';
+import { db, type Order, type OrderPayment } from '../db';
 import { translations, type Language } from '../translations';
 import { formatCurrency, formatDate, formatWhatsAppUrl, compressImage } from '../lib/utils';
 import { Plus, Check, Trash2, Camera, RotateCcw, MessageCircle, Printer, X, Download, AlertCircle, Image as ImageIcon } from 'lucide-react';
@@ -29,6 +29,7 @@ export default function Orders({ lang }: OrdersProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [currentImg, setCurrentImg] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [editingPayments, setEditingPayments] = useState<OrderPayment[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -46,7 +47,10 @@ export default function Orders({ lang }: OrdersProps) {
     status: 'pending',
     makingCharges: '',
     weightPolish: '',
-    totalWt: ''
+    totalWt: '',
+    goldAmount: 0,
+    mazdori: 0,
+    oldGoldMinus: 0
   });
 
   const [printData, setPrintData] = useState<{ data: Order, id: number } | null>(null);
@@ -191,7 +195,14 @@ export default function Orders({ lang }: OrdersProps) {
   }, [searchTerm]);
 
   const updateRem = () => {
-    return formData.total - formData.recAmt;
+    const total = (Number(formData.goldAmount) || 0) + (Number(formData.mazdori) || 0);
+    const oldGoldMinus = Number(formData.oldGoldMinus) || 0;
+    if (editId) {
+      const otherPaymentsSum = editingPayments.slice(1).reduce((sum, p) => sum + p.amt, 0);
+      return total - oldGoldMinus - (Number(formData.recAmt) || 0) - otherPaymentsSum;
+    } else {
+      return total - oldGoldMinus - (Number(formData.recAmt) || 0);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,6 +221,19 @@ export default function Orders({ lang }: OrdersProps) {
   const handleSave = async () => {
     if (!formData.name) return alert(lang === 'ur' ? "نام ضروری ہے!" : "Name is required!");
     
+    let payments = editId ? (await db.orders.get(editId))?.payments || [] : [{ amt: formData.recAmt, date: formatDate(new Date(), 'ur-PK') }];
+    
+    if (editId && payments.length > 0) {
+      payments[0] = { ...payments[0], amt: formData.recAmt };
+    }
+    
+    const paymentsSum = payments.reduce((sum, p) => sum + p.amt, 0);
+    const goldAmount = Number(formData.goldAmount) || 0;
+    const mazdori = Number(formData.mazdori) || 0;
+    const oldGoldMinus = Number(formData.oldGoldMinus) || 0;
+    const calculatedTotal = goldAmount + mazdori;
+    const rem = calculatedTotal - oldGoldMinus - paymentsSum;
+
     const order: Order = {
       name: formData.name,
       phone: formData.phone,
@@ -221,14 +245,17 @@ export default function Orders({ lang }: OrdersProps) {
       karigar: formData.karigar,
       oldWt: formData.oldWt ? parseFloat(Number(formData.oldWt).toFixed(2)).toString() : '',
       readyWt: formData.readyWt ? parseFloat(Number(formData.readyWt).toFixed(2)).toString() : '',
-      total: formData.total,
-      payments: editId ? (await db.orders.get(editId))?.payments || [] : [{ amt: formData.recAmt, date: formatDate(new Date(), 'ur-PK') }],
-      rem: formData.total - formData.recAmt,
+      total: calculatedTotal,
+      payments: payments,
+      rem: rem,
       status: formData.status,
       img: currentImg,
       makingCharges: formData.makingCharges ? parseFloat(Number(formData.makingCharges).toFixed(2)).toString() : '',
       weightPolish: formData.weightPolish,
-      totalWt: formData.totalWt ? parseFloat(Number(formData.totalWt).toFixed(2)).toString() : ''
+      totalWt: formData.totalWt ? parseFloat(Number(formData.totalWt).toFixed(2)).toString() : '',
+      goldAmount: goldAmount,
+      mazdori: mazdori,
+      oldGoldMinus: oldGoldMinus
     };
 
     let id;
@@ -256,6 +283,7 @@ export default function Orders({ lang }: OrdersProps) {
     setIsAdding(false);
     setEditId(null);
     setCurrentImg(null);
+    setEditingPayments([]);
     setFormData({
       name: '',
       phone: '',
@@ -272,12 +300,16 @@ export default function Orders({ lang }: OrdersProps) {
       status: 'pending',
       makingCharges: '',
       weightPolish: '',
-      totalWt: ''
+      totalWt: '',
+      goldAmount: 0,
+      mazdori: 0,
+      oldGoldMinus: 0
     });
   };
 
   const handleEdit = (order: Order) => {
     setEditId(order.id!);
+    setEditingPayments(order.payments || []);
     setFormData({
       name: order.name,
       phone: order.phone,
@@ -290,11 +322,14 @@ export default function Orders({ lang }: OrdersProps) {
       oldWt: order.oldWt,
       readyWt: order.readyWt,
       total: order.total,
-      recAmt: order.total - order.rem,
+      recAmt: order.payments[0]?.amt || 0,
       status: order.status,
       makingCharges: order.makingCharges || '',
       weightPolish: order.weightPolish || '',
-      totalWt: order.totalWt || ''
+      totalWt: order.totalWt || '',
+      goldAmount: order.goldAmount || 0,
+      mazdori: order.mazdori || 0,
+      oldGoldMinus: order.oldGoldMinus || 0
     });
     setCurrentImg(order.img || null);
     setIsAdding(true);
@@ -763,22 +798,66 @@ export default function Orders({ lang }: OrdersProps) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500 urdu-text">کل رقم (Total):</label>
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'سونے کی رقم (Gold Amount):' : 'Gold Amount:'}</label>
               <input 
                 type="number" 
-                value={formData.total || ''}
-                onChange={e => setFormData({ ...formData, total: Number(e.target.value) })}
-                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
-                placeholder="e.g. 50,000"
+                value={formData.goldAmount || ''}
+                onChange={e => {
+                  const val = Number(e.target.value) || 0;
+                  setFormData(prev => ({
+                    ...prev,
+                    goldAmount: val,
+                    total: val + (prev.mazdori || 0)
+                  }));
+                }}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black font-bold"
+                placeholder="e.g. 40,000"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500 urdu-text">وصول شدہ رقم (Advance):</label>
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'مزدوری (Mazdori):' : 'Mazdori:'}</label>
+              <input 
+                type="number" 
+                value={formData.mazdori || ''}
+                onChange={e => {
+                  const val = Number(e.target.value) || 0;
+                  setFormData(prev => ({
+                    ...prev,
+                    mazdori: val,
+                    total: (prev.goldAmount || 0) + val
+                  }));
+                }}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black font-bold"
+                placeholder="e.g. 5,000"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500 urdu-text font-bold">{lang === 'ur' ? 'کل رقم (Total Amount):' : 'Total Amount:'}</label>
+              <input 
+                type="number" 
+                value={((Number(formData.goldAmount) || 0) + (Number(formData.mazdori) || 0)) || ''}
+                disabled
+                className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-600 font-extrabold cursor-not-allowed"
+                placeholder="Calculated automatically"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'پرانا سونا منہا (Old Gold Minus):' : 'Old Gold Minus:'}</label>
+              <input 
+                type="number" 
+                value={formData.oldGoldMinus || ''}
+                onChange={e => setFormData({ ...formData, oldGoldMinus: Number(e.target.value) || 0 })}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black font-bold"
+                placeholder="e.g. 10,000"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'وصول شدہ رقم / ایڈوانس (Advance):' : 'Advance Amount:'}</label>
               <input 
                 type="number" 
                 value={formData.recAmt || ''}
-                onChange={e => setFormData({ ...formData, recAmt: Number(e.target.value) })}
-                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
+                onChange={e => setFormData({ ...formData, recAmt: Number(e.target.value) || 0 })}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black font-bold"
                 placeholder="e.g. 10,000"
               />
             </div>

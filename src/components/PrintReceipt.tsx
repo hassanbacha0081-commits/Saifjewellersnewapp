@@ -285,7 +285,10 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
   if (type === 'sale') {
     const sale = data as Sale;
     const oldGoldDeduction = Math.round(sale.items.reduce((a, b) => a + (b.t < 0 ? Math.abs(b.t) : 0), 0));
-    const totalBill = sale.total + oldGoldDeduction;
+    const goldItems = sale.items.filter(item => item.t > 0);
+    const goldAmount = Math.round(goldItems.reduce((sum, item) => sum + (item.w + item.mk) * item.r, 0));
+    const mazdori = Math.round(goldItems.reduce((sum, item) => sum + (item.t - (item.w + item.mk) * item.r), 0));
+    const totalBill = goldAmount + mazdori;
 
     return (
       <div ref={ref} className="print-receipt-container bg-white text-zinc-900" dir="rtl" style={{ 
@@ -385,16 +388,24 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
             <table className="summary-table" style={{ marginLeft: 'auto' }}>
               <tbody>
                 <tr>
-                  <th className="font-nastaliq">کل بل رقم</th>
-                  <td className="font-mono">{totalBill.toLocaleString()}</td>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>سونے کی رقم</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{goldAmount.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>مزدوری</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{mazdori.toLocaleString()}</td>
+                </tr>
+                <tr style={{ borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd' }}>
+                  <th className="font-nastaliq font-bold" style={{ padding: '3px 8px' }}>کل رقم</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{totalBill.toLocaleString()}</td>
                 </tr>
                 <tr className="text-red-700">
-                  <th className="font-nastaliq">پرانا سونا منہا (-)</th>
-                  <td className="font-mono">{oldGoldDeduction.toLocaleString()}</td>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>پرانا سونا منہا (-)</th>
+                  <td className="font-mono" style={{ padding: '3px 8px' }}>{oldGoldDeduction.toLocaleString()}</td>
                 </tr>
                 <tr className="text-green-700">
-                  <th className="font-nastaliq">وصول شدہ رقم</th>
-                  <td className="font-mono">{sale.rec.toLocaleString()}</td>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ رقم</th>
+                  <td className="font-mono" style={{ padding: '3px 8px' }}>{sale.rec.toLocaleString()}</td>
                 </tr>
                 <tr className="final-total-row">
                   <th className="font-nastaliq font-black">صاف بقایا</th>
@@ -427,6 +438,11 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
 
     if (type === 'order') {
       const order = data as Order;
+      const paymentsSum = order.payments.reduce((sum, p) => sum + p.amt, 0);
+      const goldAmount = order.goldAmount !== undefined ? order.goldAmount : order.total;
+      const mazdori = order.mazdori !== undefined ? order.mazdori : 0;
+      const oldGoldMinus = order.oldGoldMinus || 0;
+      const totalAmount = goldAmount + mazdori;
       return (
         <div ref={ref} className="print-receipt-container bg-white text-zinc-900" dir="rtl" style={{ 
           fontFamily: "'Inter', sans-serif", 
@@ -549,8 +565,24 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
             <table className="summary-table" style={{ marginLeft: 'auto', marginBottom: '8px' }}>
               <tbody>
                 <tr>
-                  <th className="font-nastaliq" style={{ padding: '5px 10px' }}>کل رقم</th>
-                  <td className="font-mono font-bold text-right" style={{ padding: '5px 10px' }}>{order.total.toLocaleString()}</td>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>سونے کی رقم</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{goldAmount.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>مزدوری</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{mazdori.toLocaleString()}</td>
+                </tr>
+                <tr style={{ borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd' }}>
+                  <th className="font-nastaliq font-bold" style={{ padding: '3px 8px' }}>کل رقم</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{totalAmount.toLocaleString()}</td>
+                </tr>
+                <tr className="text-red-700">
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>پرانا سونا منہا (-)</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{oldGoldMinus.toLocaleString()}</td>
+                </tr>
+                <tr className="text-green-700">
+                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ رقم</th>
+                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{paymentsSum.toLocaleString()}</td>
                 </tr>
                 <tr className="final-total-row">
                   <th className="font-nastaliq font-black text-right font-bold text-gold-dark" style={{ padding: '5px 10px' }}>صاف بقایا</th>
