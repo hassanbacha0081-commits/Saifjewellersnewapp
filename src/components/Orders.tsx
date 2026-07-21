@@ -48,6 +48,7 @@ export default function Orders({ lang }: OrdersProps) {
     makingCharges: '',
     weightPolish: '',
     totalWt: '',
+    izafiWt: '',
     goldAmount: 0,
     mazdori: 0,
     oldGoldMinus: 0
@@ -253,6 +254,7 @@ export default function Orders({ lang }: OrdersProps) {
       makingCharges: formData.makingCharges ? parseFloat(Number(formData.makingCharges).toFixed(2)).toString() : '',
       weightPolish: formData.weightPolish,
       totalWt: formData.totalWt ? parseFloat(Number(formData.totalWt).toFixed(2)).toString() : '',
+      izafiWt: formData.izafiWt ? parseFloat(Number(formData.izafiWt).toFixed(2)).toString() : '',
       goldAmount: goldAmount,
       mazdori: mazdori,
       oldGoldMinus: oldGoldMinus
@@ -301,6 +303,7 @@ export default function Orders({ lang }: OrdersProps) {
       makingCharges: '',
       weightPolish: '',
       totalWt: '',
+      izafiWt: '',
       goldAmount: 0,
       mazdori: 0,
       oldGoldMinus: 0
@@ -327,6 +330,7 @@ export default function Orders({ lang }: OrdersProps) {
       makingCharges: order.makingCharges || '',
       weightPolish: order.weightPolish || '',
       totalWt: order.totalWt || '',
+      izafiWt: order.izafiWt || '',
       goldAmount: order.goldAmount || 0,
       mazdori: order.mazdori || 0,
       oldGoldMinus: order.oldGoldMinus || 0
@@ -665,22 +669,28 @@ export default function Orders({ lang }: OrdersProps) {
             <div className="col-span-1 md:col-span-2 border-t pt-4 mt-2">
               <h4 className="font-bold text-sm text-sky-900 urdu-text flex items-center gap-1.5 uppercase tracking-wide">
                 <span className="w-1.5 h-3.5 bg-gold rounded-full inline-block"></span>
-                {lang === 'ur' ? 'وزن / تیار وزن (Weight/Tayar Weight)' : 'Weight/Tayar Weight'}
+                {lang === 'ur' ? 'وزن (Weight)' : 'Weight'}
               </h4>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'پرانا وزن (g):' : 'Purana Wazan (g):'}</label>
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'پرانا وزن (g):' : 'Old Gold Weight (g):'}</label>
               <input 
                 type="number" 
                 step="any"
                 value={formData.oldWt || ''}
-                onChange={e => setFormData({ ...formData, oldWt: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value;
+                  const total = parseFloat(formData.totalWt) || 0;
+                  const old = parseFloat(val) || 0;
+                  const izafiWt = val ? parseFloat((total - old).toFixed(2)).toString() : '';
+                  setFormData({ ...formData, oldWt: val, izafiWt });
+                }}
                 className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
                 placeholder="e.g. 1.50"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'وزن / تیار وزن (g):' : 'Weight/Tayar Weight (g):'}</label>
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'وزن (g):' : 'Weight (g):'}</label>
               <input 
                 type="number" 
                 step="any"
@@ -690,10 +700,15 @@ export default function Orders({ lang }: OrdersProps) {
                   const ready = parseFloat(val) || 0;
                   const polish = parseFloat(formData.makingCharges) || 0;
                   const calculatedTotal = (ready + polish) > 0 ? parseFloat((ready + polish).toFixed(2)).toString() : '';
+                  
+                  const old = parseFloat(formData.oldWt) || 0;
+                  const izafiWt = formData.oldWt ? parseFloat(((parseFloat(calculatedTotal) || 0) - old).toFixed(2)).toString() : '';
+
                   setFormData({ 
                     ...formData, 
                     readyWt: val,
-                    totalWt: calculatedTotal
+                    totalWt: calculatedTotal,
+                    izafiWt
                   });
                 }}
                 className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
@@ -711,10 +726,15 @@ export default function Orders({ lang }: OrdersProps) {
                   const ready = parseFloat(formData.readyWt) || 0;
                   const polish = parseFloat(val) || 0;
                   const calculatedTotal = (ready + polish) > 0 ? parseFloat((ready + polish).toFixed(2)).toString() : '';
+                  
+                  const old = parseFloat(formData.oldWt) || 0;
+                  const izafiWt = formData.oldWt ? parseFloat(((parseFloat(calculatedTotal) || 0) - old).toFixed(2)).toString() : '';
+
                   setFormData({ 
                     ...formData, 
                     makingCharges: val,
-                    totalWt: calculatedTotal
+                    totalWt: calculatedTotal,
+                    izafiWt
                   });
                 }}
                 className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
@@ -722,16 +742,37 @@ export default function Orders({ lang }: OrdersProps) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'ٹوٹل وزن (g):' : 'Total Wazan (g):'}</label>
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'ٹوٹل وزن (g):' : 'Total Weight (g):'}</label>
               <input 
                 type="number" 
                 step="any"
                 value={formData.totalWt || ''}
-                onChange={e => setFormData({ ...formData, totalWt: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value;
+                  const total = parseFloat(val) || 0;
+                  const old = parseFloat(formData.oldWt) || 0;
+                  const izafiWt = formData.oldWt ? parseFloat((total - old).toFixed(2)).toString() : '';
+                  
+                  setFormData({ ...formData, totalWt: val, izafiWt });
+                }}
                 className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
                 placeholder="e.g. 6.70"
               />
             </div>
+            {formData.oldWt && (
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'اضافی وزن (g):' : 'Azafi Weight (g):'}</label>
+                <input 
+                  type="number" 
+                  step="any"
+                  value={formData.izafiWt || ''}
+                  onChange={e => setFormData({ ...formData, izafiWt: e.target.value })}
+                  className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-600 font-extrabold cursor-not-allowed"
+                  placeholder="Calculated automatically"
+                  disabled
+                />
+              </div>
+            )}
 
             {/* Picture Upload / Camera Capture in sequence, spanning 2 cols */}
             <div className="col-span-1 md:col-span-2 space-y-1 mt-2">
@@ -930,13 +971,13 @@ export default function Orders({ lang }: OrdersProps) {
               )}
               {order.oldWt && (
                 <div className="flex justify-between text-sky-800 bg-sky-50 px-2 py-1 rounded-md border border-sky-100">
-                  <span className="urdu-text text-xs">{lang === 'ur' ? 'پرانا وزن:' : 'Purana Wazan:'}</span>
+                  <span className="urdu-text text-xs">{lang === 'ur' ? 'پرانا وزن:' : 'Old Gold Weight:'}</span>
                   <span className="font-bold text-xs">{order.oldWt}g</span>
                 </div>
               )}
               {order.readyWt && (
                 <div className="flex justify-between text-zinc-800 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
-                  <span className="urdu-text text-xs">{lang === 'ur' ? 'وزن / تیار وزن:' : 'Weight/Tayar Weight:'}</span>
+                  <span className="urdu-text text-xs">{lang === 'ur' ? 'وزن:' : 'Weight:'}</span>
                   <span className="font-bold text-xs">{order.readyWt}g</span>
                 </div>
               )}
@@ -948,8 +989,14 @@ export default function Orders({ lang }: OrdersProps) {
               )}
               {order.totalWt && (
                 <div className="flex justify-between text-emerald-800 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
-                  <span className="urdu-text text-xs">{lang === 'ur' ? 'ٹوٹل وزن:' : 'Total Wazan:'}</span>
+                  <span className="urdu-text text-xs">{lang === 'ur' ? 'ٹوٹل وزن:' : 'Total Weight:'}</span>
                   <span className="font-bold text-xs">{order.totalWt}g</span>
+                </div>
+              )}
+              {order.izafiWt && (
+                <div className="flex justify-between text-purple-800 bg-purple-50 px-2 py-1 rounded-md border border-purple-100">
+                  <span className="urdu-text text-xs">{lang === 'ur' ? 'اضافی وزن:' : 'Azafi Weight:'}</span>
+                  <span className="font-bold text-xs">{order.izafiWt}g</span>
                 </div>
               )}
               {order.img && (

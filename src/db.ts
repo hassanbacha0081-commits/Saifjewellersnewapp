@@ -46,6 +46,7 @@ export interface Order {
   makingCharges?: string;
   weightPolish?: string;
   totalWt?: string;
+  izafiWt?: string;
   goldAmount?: number;
   mazdori?: number;
   oldGoldMinus?: number;
@@ -105,6 +106,26 @@ export interface Expense {
   date: string;
 }
 
+export interface KhaataAccount {
+  id?: number;
+  name: string;
+  phone: string;
+  createdAt: string;
+}
+
+export interface Khaata {
+  id?: number;
+  accountId: number;
+  date: string;
+  itemDetail: string;
+  pakaye: number;
+  mixWazan: number;
+  kaatInRati: number;
+  itemPasa: number;
+  pasaDia: number;
+  totalBaqaya: number;
+}
+
 export interface Setting {
   id?: string;
   key: string;
@@ -120,10 +141,12 @@ export class MyDatabase extends Dexie {
   settings!: Table<Setting>;
   goldPurchases!: Table<GoldPurchase>;
   expenses!: Table<Expense>;
+  khaataAccounts!: Table<KhaataAccount>;
+  khaata!: Table<Khaata>;
 
   constructor() {
-    super('NafeesERP_V56_Final');
-    this.version(6).stores({
+    super('NafeesERP_V58_Final');
+    this.version(8).stores({
       sales: '++id, name, phone, date',
       orders: '++id, name, phone, status, due, karigar',
       karigars: '++id, name, phone, date',
@@ -131,7 +154,9 @@ export class MyDatabase extends Dexie {
       stock: '++id, name, type, [name+type]',
       settings: 'key',
       goldPurchases: '++id, name, phone, date',
-      expenses: '++id, category, date'
+      expenses: '++id, category, date',
+      khaataAccounts: '++id, name',
+      khaata: '++id, accountId, date'
     });
   }
 }

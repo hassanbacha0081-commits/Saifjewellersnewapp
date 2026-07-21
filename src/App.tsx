@@ -34,10 +34,11 @@ import Reports from './components/Reports';
 import Settings from './components/Settings';
 import LockScreen from './components/LockScreen';
 import Expenses from './components/Expenses';
+import { Khaata } from './components/Khaata';
 
 import { APP_CONFIG } from './config';
 
-type Section = 'billing' | 'purchases' | 'records' | 'orders' | 'karigar' | 'repairs' | 'stock' | 'customers' | 'expenses' | 'reports' | 'settings';
+type Section = 'billing' | 'purchases' | 'records' | 'orders' | 'karigar' | 'repairs' | 'stock' | 'customers' | 'expenses' | 'reports' | 'khaata' | 'settings';
 
 export default function App() {
   const [lang, setLang] = useState<Language>('ur');
@@ -186,6 +187,7 @@ export default function App() {
     { id: 'records', icon: History, label: t.records },
     { id: 'orders', icon: Package, label: t.orders },
     { id: 'karigar', icon: Users, label: t.karigar },
+    { id: 'khaata', icon: Wallet, label: t.khaata },
     { id: 'repairs', icon: Wrench, label: t.repairs },
     { id: 'stock', icon: Package, label: t.stock },
     { id: 'customers', icon: Users, label: t.customers },
@@ -200,6 +202,7 @@ export default function App() {
       case 'records': return <Records lang={lang} setActiveSection={setActiveSection} setEditingSale={setEditingSale} />;
       case 'orders': return <Orders lang={lang} />;
       case 'karigar': return <Karigar lang={lang} />;
+      case 'khaata': return <Khaata lang={lang} />;
       case 'repairs': return <Repairs lang={lang} />;
       case 'stock': return <Stock lang={lang} />;
       case 'customers': return <Customers lang={lang} />;

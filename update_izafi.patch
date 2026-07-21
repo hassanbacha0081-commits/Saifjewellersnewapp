@@ -1,0 +1,30 @@
+--- src/components/Orders.tsx
++++ src/components/Orders.tsx
+@@ -682,5 +682,5 @@
+                   const total = parseFloat(formData.totalWt) || 0;
+                   const old = parseFloat(val) || 0;
+-                  const izafiWt = val && formData.totalWt ? parseFloat((total - old).toFixed(2)).toString() : '';
++                  const izafiWt = val ? parseFloat((total - old).toFixed(2)).toString() : '';
+                   setFormData({ ...formData, oldWt: val, izafiWt });
+                 }}
+@@ -702,5 +702,5 @@
+                   
+                   const old = parseFloat(formData.oldWt) || 0;
+-                  const izafiWt = formData.oldWt && calculatedTotal ? parseFloat((parseFloat(calculatedTotal) - old).toFixed(2)).toString() : '';
++                  const izafiWt = formData.oldWt ? parseFloat(((parseFloat(calculatedTotal) || 0) - old).toFixed(2)).toString() : '';
+ 
+                   setFormData({ 
+@@ -728,5 +728,5 @@
+                   
+                   const old = parseFloat(formData.oldWt) || 0;
+-                  const izafiWt = formData.oldWt && calculatedTotal ? parseFloat((parseFloat(calculatedTotal) - old).toFixed(2)).toString() : '';
++                  const izafiWt = formData.oldWt ? parseFloat(((parseFloat(calculatedTotal) || 0) - old).toFixed(2)).toString() : '';
+ 
+                   setFormData({ 
+@@ -751,5 +751,5 @@
+                   const total = parseFloat(val) || 0;
+                   const old = parseFloat(formData.oldWt) || 0;
+-                  const izafiWt = formData.oldWt && val ? parseFloat((total - old).toFixed(2)).toString() : '';
++                  const izafiWt = formData.oldWt ? parseFloat((total - old).toFixed(2)).toString() : '';
+                   
+                   setFormData({ ...formData, totalWt: val, izafiWt });
