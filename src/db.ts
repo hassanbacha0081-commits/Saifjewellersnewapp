@@ -124,6 +124,7 @@ export interface Khaata {
   itemPasa: number;
   pasaDia: number;
   totalBaqaya: number;
+  img?: string | null;
 }
 
 export interface Setting {

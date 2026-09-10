@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Khaata, type KhaataAccount } from '../db';
 import { translations, type Language } from '../translations';
-import { formatDate, formatWhatsAppUrl } from '../lib/utils';
-import { Plus, Check, Trash2, X, ChevronRight, ArrowLeft, Edit2, FileText, Share2 } from 'lucide-react';
+import { formatDate, formatWhatsAppUrl, compressImage } from '../lib/utils';
+import { Plus, Check, Trash2, X, ChevronRight, ArrowLeft, Edit2, FileText, Share2, Camera, Image as ImageIcon, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -12,6 +12,7 @@ import { Capacitor } from '@capacitor/core';
 import { Printer as CapPrinter } from '@capgo/capacitor-printer';
 import { MultiSelectInput } from './MultiSelectInput';
 import { ConfirmModal } from './ConfirmModal';
+import ImageLightbox from './ImageLightbox';
 
 interface KhaataProps {
   lang: Language;
@@ -24,6 +25,8 @@ export function Khaata({ lang }: KhaataProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [deleteAccountId, setDeleteAccountId] = useState<number | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<number | null>(null);
+  const [currentImg, setCurrentImg] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   // Account List View
   const accounts = useLiveQuery(() => db.khaataAccounts.orderBy('name').toArray());
@@ -84,6 +87,19 @@ export function Khaata({ lang }: KhaataProps) {
   };
 
   // --- Entry Handlers ---
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const compressed = await compressImage(base64);
+        setCurrentImg(compressed);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveEntry = async () => {
     if (!selectedAccountId) return;
     if (!entryFormData.itemDetail) return alert(lang === 'ur' ? "آئٹم کی تفصیل ضروری ہے!" : "Item detail is required!");
@@ -122,10 +138,15 @@ export function Khaata({ lang }: KhaataProps) {
       kaatInRati,
       itemPasa,
       pasaDia,
-      totalBaqaya
+      totalBaqaya,
+      img: currentImg
     };
 
     if (editEntryId) {
+      if (!currentImg) {
+        const old = await db.khaata.get(editEntryId);
+        if (old) record.img = old.img;
+      }
       await db.khaata.update(editEntryId, record);
     } else {
       await db.khaata.add(record);
@@ -140,6 +161,7 @@ export function Khaata({ lang }: KhaataProps) {
       itemPasa: '',
       pasaDia: '',
     });
+    setCurrentImg(null);
     setIsAddingEntry(false);
     setEditEntryId(null);
   };
@@ -155,6 +177,7 @@ export function Khaata({ lang }: KhaataProps) {
       itemPasa: record.itemPasa.toString(),
       pasaDia: record.pasaDia.toString()
     });
+    setCurrentImg(record.img || null);
     setIsAddingEntry(true);
   };
 
@@ -451,6 +474,7 @@ export function Khaata({ lang }: KhaataProps) {
                 itemPasa: '',
                 pasaDia: '',
               });
+              setCurrentImg(null);
               setIsAddingEntry(true);
               setEditEntryId(null);
             }}
@@ -557,6 +581,75 @@ export function Khaata({ lang }: KhaataProps) {
               />
             </div>
 
+            <div className="md:col-span-2 space-y-3 pt-2">
+              <label className="text-xs text-zinc-500 urdu-text block text-right pr-2">
+                {lang === 'ur' ? 'تصویر منسلک کریں (Attach Image)' : 'Attach Image'}
+              </label>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="w-full sm:w-auto grid grid-cols-2 gap-3 flex-1">
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="khaataCameraInput"
+                    />
+                    <label 
+                      htmlFor="khaataCameraInput"
+                      className="w-full min-h-[64px] flex flex-col items-center justify-center gap-1 p-3 border-2 border-dashed border-sky-200 rounded-xl text-zinc-400 cursor-pointer hover:border-gold hover:text-gold transition-all bg-white text-center"
+                    >
+                      <Camera size={20} />
+                      <span className="urdu-text text-xs font-medium">
+                        {lang === 'ur' ? 'کیمرہ (Camera)' : 'Camera'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="khaataGalleryInput"
+                    />
+                    <label 
+                      htmlFor="khaataGalleryInput"
+                      className="w-full min-h-[64px] flex flex-col items-center justify-center gap-1 p-3 border-2 border-dashed border-sky-200 rounded-xl text-zinc-400 cursor-pointer hover:border-gold hover:text-gold transition-all bg-white text-center"
+                    >
+                      <ImageIcon size={20} />
+                      <span className="urdu-text text-xs font-medium">
+                        {lang === 'ur' ? 'گیلری (Gallery)' : 'Gallery'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {currentImg && (
+                  <div 
+                    className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-gold shadow-md group cursor-pointer shrink-0"
+                    onClick={() => setLightboxImage(currentImg)}
+                  >
+                    <img 
+                      src={currentImg} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setCurrentImg(null); }}
+                      className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full shadow transition-colors z-10"
+                      title={lang === 'ur' ? 'تصویر ہٹائیں' : 'Remove Image'}
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
@@ -578,6 +671,7 @@ export function Khaata({ lang }: KhaataProps) {
               <tr>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'تاریخ' : 'Date'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'آئٹم کی تفصیل' : 'Item Detail'}</th>
+                <th className="px-6 py-4 urdu-text text-center">{lang === 'ur' ? 'تصویر' : 'Image'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'پکاۓ' : 'Pakaye'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'مکس وزن' : 'Mix Wazan'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'کاٹ رتی میں' : 'Kaat in Rati'}</th>
@@ -592,6 +686,20 @@ export function Khaata({ lang }: KhaataProps) {
                 <tr key={record.id} className="border-b border-zinc-100 hover:bg-sky-50/50 transition-colors cursor-pointer" onClick={() => handleEditEntry(record)}>
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(record.date, lang === 'ur' ? 'ur-PK' : 'en-US')}</td>
                   <td className="px-6 py-4 font-medium text-zinc-900">{record.itemDetail}</td>
+                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                    {record.img ? (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxImage(record.img!)}
+                        className="inline-block relative w-10 h-10 rounded-lg overflow-hidden border border-gold hover:scale-110 transition-transform shadow-sm"
+                        title={lang === 'ur' ? 'تصویر دیکھیں' : 'View Image'}
+                      >
+                        <img src={record.img} alt={record.itemDetail} className="w-full h-full object-cover" />
+                      </button>
+                    ) : (
+                      <span className="text-zinc-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">{record.pakaye}</td>
                   <td className="px-6 py-4">{record.mixWazan}</td>
                   <td className="px-6 py-4">{record.kaatInRati}</td>
@@ -610,7 +718,7 @@ export function Khaata({ lang }: KhaataProps) {
               ))}
               {(!khaataRecords || khaataRecords.length === 0) && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-zinc-400 urdu-text">
+                  <td colSpan={10} className="px-6 py-8 text-center text-zinc-400 urdu-text">
                     {lang === 'ur' ? 'کوئی ریکارڈ نہیں ملا' : 'No records found'}
                   </td>
                 </tr>
@@ -619,6 +727,14 @@ export function Khaata({ lang }: KhaataProps) {
           </table>
         </div>
       </div>
+
+      {lightboxImage && (
+        <ImageLightbox 
+          src={lightboxImage} 
+          onClose={() => setLightboxImage(null)} 
+          title={lang === 'ur' ? 'کھاتہ تصویر' : 'Khaata Image'}
+        />
+      )}
     </div>
   );
 }
