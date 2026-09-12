@@ -200,9 +200,23 @@ export default function Settings({ lang, setGoldRate, setLang }: SettingsProps) 
       const stock = await db.stock.toArray();
       const settings = await db.settings.toArray();
       const goldPurchases = await db.goldPurchases.toArray();
+      const expenses = await db.expenses.toArray();
+      const khaataAccounts = await db.khaataAccounts.toArray();
+      const khaata = await db.khaata.toArray();
 
-      const data = { sales, orders, karigars, repairs, stock, settings, goldPurchases };
-      const fileName = `nafees_jewellers_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const data = { 
+        sales, 
+        orders, 
+        karigars, 
+        repairs, 
+        stock, 
+        settings, 
+        goldPurchases, 
+        expenses, 
+        khaataAccounts, 
+        khaata 
+      };
+      const fileName = `saif_jewellers_backup_${new Date().toISOString().split('T')[0]}.json`;
       const jsonString = JSON.stringify(data);
 
       if (Capacitor.isNativePlatform()) {
@@ -255,14 +269,20 @@ export default function Settings({ lang, setGoldRate, setLang }: SettingsProps) 
             await db.stock.clear();
             await db.settings.clear();
             await db.goldPurchases.clear();
+            await db.expenses.clear();
+            await db.khaataAccounts.clear();
+            await db.khaata.clear();
 
-            if (data.sales) await db.sales.bulkAdd(data.sales);
-            if (data.orders) await db.orders.bulkAdd(data.orders);
-            if (data.karigars) await db.karigars.bulkAdd(data.karigars);
-            if (data.repairs) await db.repairs.bulkAdd(data.repairs);
-            if (data.stock) await db.stock.bulkAdd(data.stock);
-            if (data.settings) await db.settings.bulkAdd(data.settings);
-            if (data.goldPurchases) await db.goldPurchases.bulkAdd(data.goldPurchases);
+            if (data.sales && data.sales.length > 0) await db.sales.bulkAdd(data.sales);
+            if (data.orders && data.orders.length > 0) await db.orders.bulkAdd(data.orders);
+            if (data.karigars && data.karigars.length > 0) await db.karigars.bulkAdd(data.karigars);
+            if (data.repairs && data.repairs.length > 0) await db.repairs.bulkAdd(data.repairs);
+            if (data.stock && data.stock.length > 0) await db.stock.bulkAdd(data.stock);
+            if (data.settings && data.settings.length > 0) await db.settings.bulkAdd(data.settings);
+            if (data.goldPurchases && data.goldPurchases.length > 0) await db.goldPurchases.bulkAdd(data.goldPurchases);
+            if (data.expenses && data.expenses.length > 0) await db.expenses.bulkAdd(data.expenses);
+            if (data.khaataAccounts && data.khaataAccounts.length > 0) await db.khaataAccounts.bulkAdd(data.khaataAccounts);
+            if (data.khaata && data.khaata.length > 0) await db.khaata.bulkAdd(data.khaata);
 
             alert(lang === 'ur' ? 'ڈیٹا کامیابی سے بحال ہو گیا ہے' : 'Data restored successfully');
             window.location.reload();
@@ -288,7 +308,10 @@ export default function Settings({ lang, setGoldRate, setLang }: SettingsProps) 
             db.repairs.clear(),
             db.stock.clear(),
             db.settings.clear(),
-            db.goldPurchases.clear()
+            db.goldPurchases.clear(),
+            db.expenses.clear(),
+            db.khaataAccounts.clear(),
+            db.khaata.clear()
           ]);
           window.location.reload();
         } catch (err) {
