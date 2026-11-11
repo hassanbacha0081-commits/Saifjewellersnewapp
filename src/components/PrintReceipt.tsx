@@ -9,15 +9,50 @@ interface PrintReceiptProps {
   type: 'sale' | 'order' | 'repair' | 'karigar' | 'stock' | 'purchase';
   data: Sale | Order | Repair | KarigarRecord | StockItem | GoldPurchase;
   id?: number;
+  showOrderStatus?: boolean;
 }
 
-export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ type, data, id }, ref) => {
+export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ type, data, id, showOrderStatus = true }, ref) => {
   const [shopSettings, setShopSettings] = useState({
     name: translations.ur.shopName,
     address: translations.ur.shopAddress,
     phone: translations.ur.shopPhone,
     phone2: translations.ur.shopPhone2
   });
+
+  const getOrderStatusConfig = (status?: string) => {
+    const s = (status || '').toLowerCase().trim();
+    if (s === 'progress' || s === 'in progress' || s === 'in_progress') {
+      return {
+        label: 'کام جاری ہے (In Progress)',
+        color: '#1e40af',
+        bg: '#eff6ff',
+        border: '#93c5fd'
+      };
+    }
+    if (s === 'complete' || s === 'completed') {
+      return {
+        label: 'مکمل / تیار ہے (Completed)',
+        color: '#166534',
+        bg: '#f0fdf4',
+        border: '#86efac'
+      };
+    }
+    if (s === 'delivered') {
+      return {
+        label: 'حوالے کر دیا گیا (Delivered)',
+        color: '#6b21a8',
+        bg: '#faf5ff',
+        border: '#d8b4fe'
+      };
+    }
+    return {
+      label: 'زیر التواء (Pending)',
+      color: '#c2410c',
+      bg: '#fff7ed',
+      border: '#fdba74'
+    };
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -343,6 +378,20 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                 <th className="font-nastaliq" style={{ background: '#800000', color: 'white' }}>ریٹ فی گرام</th>
                 <td className="font-mono font-bold text-red-700">{(sale.items[0]?.r || 0).toLocaleString()}</td>
               </tr>
+              <tr>
+                <th className="font-nastaliq" style={{ background: '#800000', color: 'white', padding: '4px' }}>بل کی صورتحال</th>
+                <td colSpan={3} style={{ paddingRight: '12px', padding: '4px 12px' }}>
+                  {sale.rem <= 0 ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '2px 10px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: 'bold', fontSize: '13px', border: '1px solid #86efac' }}>
+                      ✓ صاف / بے باق (Clear - Paid in Full)
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '2px 10px', borderRadius: '4px', background: '#fee2e2', color: '#b91c1c', fontWeight: 'bold', fontSize: '13px', border: '1px solid #fca5a5' }}>
+                      ⚠ بقایا دار (Baqaya: Rs. {sale.rem.toLocaleString()})
+                    </span>
+                  )}
+                </td>
+              </tr>
             </tbody>
           </table>
 
@@ -503,6 +552,32 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                 <th className="font-nastaliq" style={{ background: '#800000', color: 'white', padding: '5px' }}>فی تولہ ریٹ</th>
                 <td className="font-mono font-bold text-gold">{order.pricePerTola || '-'}</td>
               </tr>
+              {showOrderStatus && (
+                <tr>
+                  <th className="font-nastaliq" style={{ background: '#800000', color: 'white', padding: '5px' }}>اسٹیٹس (Status)</th>
+                  <td colSpan={3} className="font-nastaliq font-bold" style={{ paddingRight: '10px' }}>
+                    {(() => {
+                      const cfg = getOrderStatusConfig(order.status);
+                      return (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '3px 12px',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: cfg.color,
+                          backgroundColor: cfg.bg,
+                          border: `1.5px solid ${cfg.border}`
+                        }}>
+                          {cfg.label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 
@@ -588,7 +663,13 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                 </tr>
                 <tr className="final-total-row">
                   <th className="font-nastaliq font-black text-right font-bold text-gold-dark" style={{ padding: '5px 10px' }}>صاف بقایا</th>
-                  <td className="font-black font-mono text-gold-dark text-right" style={{ padding: '5px 10px' }}>{order.rem.toLocaleString()}</td>
+                  <td className="font-black font-mono text-gold-dark text-right" style={{ padding: '5px 10px' }}>
+                    {order.rem <= 0 ? (
+                      <span style={{ color: '#15803d' }}>0 (صاف / Clear)</span>
+                    ) : (
+                      order.rem.toLocaleString()
+                    )}
+                  </td>
                 </tr>
               </tbody>
             </table>

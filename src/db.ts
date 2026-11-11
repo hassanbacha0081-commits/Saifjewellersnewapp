@@ -7,6 +7,7 @@ export interface SalesItem {
   mk: number; // Polish (per gram)
   r: number; // Rate
   t: number; // Total for item
+  mz?: number; // Mazdori/Labor
   img?: string | null;
 }
 

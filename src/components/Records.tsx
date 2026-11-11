@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Sale, type GoldPurchase } from '../db';
 import { translations, type Language } from '../translations';
-import { Search, Printer, Trash2, Edit, MessageCircle, X, AlertTriangle, History, Download, AlertCircle, ShoppingCart, Tag, Eye } from 'lucide-react';
+import { Search, Printer, Trash2, Edit, MessageCircle, X, AlertTriangle, History, Download, AlertCircle, ShoppingCart, Tag, Eye, EyeOff, Check, Scale, Sparkles, Hammer, Filter, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatWhatsAppUrl } from '../lib/utils';
 import { useReactToPrint } from 'react-to-print';
@@ -18,6 +18,7 @@ import { Printer as CapPrinter } from '@capgo/capacitor-printer';
 import { APP_CONFIG } from '../config';
 
 import ImageLightbox from './ImageLightbox';
+import WhatsAppShareModal, { type WhatsAppShareData } from './WhatsAppShareModal';
 
 interface RecordsProps {
   lang: Language;
@@ -30,10 +31,13 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
   const isUrdu = lang === 'ur';
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'sales' | 'purchases'>('sales');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'baqaya' | 'clear'>('all');
+  const [showSummary, setShowSummary] = useState(true);
 
   const [printData, setPrintData] = useState<{ data: Sale | GoldPurchase, id: number, type: 'sale' | 'purchase' } | null>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
-  const [viewImage, setViewImage] = useState<string | null>(null);
+  const [lightboxData, setLightboxData] = useState<{ img: string; title?: string; phone?: string; name?: string; caption?: string } | null>(null);
+  const [whatsappModalData, setWhatsappModalData] = useState<WhatsAppShareData | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: number, type: 'sale' | 'purchase' } | null>(null);
@@ -156,7 +160,7 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
     }
   };
 
-  const sales = useLiveQuery(() => {
+  const rawSales = useLiveQuery(() => {
     if (!db.sales) return Promise.resolve([]);
     if (!searchTerm) return db.sales.orderBy('id').reverse().toArray();
     
@@ -171,6 +175,41 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
       .reverse()
       .toArray();
   }, [searchTerm]);
+
+  const allSalesCount = rawSales?.length || 0;
+  const baqayaCount = rawSales?.filter(s => s.rem > 0).length || 0;
+  const clearCount = rawSales?.filter(s => s.rem <= 0).length || 0;
+
+  const sales = (rawSales || []).filter(sale => {
+    if (filterStatus === 'baqaya') return sale.rem > 0;
+    if (filterStatus === 'clear') return sale.rem <= 0;
+    return true;
+  });
+
+  // Calculate totals across the active/filtered sales list: total weight, total polish, total mazdori
+  const salesTotals = (sales || []).reduce((acc, sale) => {
+    let billWeight = 0;
+    let billPolish = 0;
+    let billMazdori = 0;
+
+    (sale.items || []).forEach(item => {
+      // Normal sale items weight
+      if (item.t >= 0) {
+        billWeight += (Number(item.w) || 0);
+      }
+      billPolish += (Number(item.mk) || 0);
+      const mz = item.mz !== undefined ? Number(item.mz) : Math.max(0, Math.round(item.t - (item.w + (item.mk || 0)) * item.r));
+      billMazdori += mz;
+    });
+
+    acc.weight += billWeight;
+    acc.polish += billPolish;
+    acc.mazdori += billMazdori;
+    acc.total += (sale.total || 0);
+    acc.rec += (sale.rec || 0);
+    acc.rem += (sale.rem || 0);
+    return acc;
+  }, { weight: 0, polish: 0, mazdori: 0, total: 0, rec: 0, rem: 0 });
 
   const purchases = useLiveQuery(() => {
     if (!db.goldPurchases) return Promise.resolve([]);
@@ -229,9 +268,29 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
 
     return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
-      {/* Image Modal */}
-      {viewImage && (
-        <ImageLightbox src={viewImage} onClose={() => setViewImage(null)} title={lang === 'ur' ? 'تصویر ریکارڈ' : 'Record Image'} />
+      {/* Image Modal & WhatsApp Share Modal */}
+      {lightboxData && (
+        <ImageLightbox 
+          src={lightboxData.img} 
+          onClose={() => setLightboxData(null)} 
+          title={lightboxData.title || (lang === 'ur' ? 'تصویر ریکارڈ' : 'Record Image')}
+          phone={lightboxData.phone}
+          customerName={lightboxData.name}
+          caption={lightboxData.caption}
+          onOpenWhatsAppModal={() => {
+            const current = lightboxData;
+            setLightboxData(null);
+            setWhatsappModalData(current);
+          }}
+        />
+      )}
+
+      {whatsappModalData && (
+        <WhatsAppShareModal 
+          data={whatsappModalData}
+          onClose={() => setWhatsappModalData(null)}
+          lang={lang}
+        />
       )}
 
       <ConfirmModal 
@@ -362,6 +421,148 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
             خریداری (Purchases)
           </button>
         </div>
+
+        {activeTab === 'sales' && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500 urdu-text flex items-center gap-1">
+                <Filter size={14} className="text-gold-dark" />
+                {isUrdu ? 'بل فلٹر:' : 'Filter Bills:'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFilterStatus('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all urdu-text flex items-center gap-1.5 ${
+                  filterStatus === 'all'
+                    ? 'bg-sky-900 text-gold shadow-sm ring-2 ring-gold/40'
+                    : 'bg-white text-zinc-700 hover:bg-sky-50 border border-sky-200'
+                }`}
+              >
+                <span>{isUrdu ? 'تمام بلز' : 'All Bills'}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'bg-zinc-100 text-zinc-600'}`}>
+                  {allSalesCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('baqaya')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all urdu-text flex items-center gap-1.5 ${
+                  filterStatus === 'baqaya'
+                    ? 'bg-red-700 text-white shadow-sm ring-2 ring-red-400'
+                    : 'bg-white text-red-700 hover:bg-red-50 border border-red-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                <span>{isUrdu ? 'بقایا دار' : 'Baqaya'}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterStatus === 'baqaya' ? 'bg-red-900 text-white' : 'bg-red-100 text-red-700'}`}>
+                  {baqayaCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('clear')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all urdu-text flex items-center gap-1.5 ${
+                  filterStatus === 'clear'
+                    ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-400'
+                    : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
+                }`}
+              >
+                <Check size={14} className="stroke-[3]" />
+                <span>{isUrdu ? 'صاف (کلیئر)' : 'Clear'}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterStatus === 'clear' ? 'bg-emerald-900 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {clearCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Option to show/hide total weight, polish, mazdori */}
+            <button
+              type="button"
+              onClick={() => setShowSummary(prev => !prev)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all urdu-text shadow-sm"
+            >
+              {showSummary ? <EyeOff size={15} className="text-amber-700" /> : <Eye size={15} className="text-amber-700" />}
+              <span>
+                {showSummary 
+                  ? (isUrdu ? 'خلاصہ چھپائیں' : 'Hide Totals')
+                  : (isUrdu ? 'مجموعی خلاصہ دیکھیں (وزن، پالش، مزدوری)' : 'Show Totals (Weight, Polish, Mazdori)')}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Summary Cards */}
+        {activeTab === 'sales' && showSummary && (
+          <div className="bg-gradient-to-r from-sky-900 via-sky-800 to-sky-950 text-white p-5 rounded-2xl shadow-lg border border-gold/30">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-sky-700/60">
+              <div className="flex items-center gap-2">
+                <Scale className="text-gold" size={20} />
+                <h3 className="text-base font-bold text-gold urdu-text">
+                  {isUrdu ? 'مجموعی سیلز خلاصہ (کل وزن، کل پالش اور کل مزدوری)' : 'Sales Totals Summary (Weight, Polish & Mazdori)'}
+                </h3>
+              </div>
+              <span className="text-xs text-sky-200 urdu-text font-mono">
+                {isUrdu ? `بلز تعداد: ${sales.length}` : `Bills: ${sales.length}`}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between text-amber-300 text-xs mb-1">
+                  <span className="urdu-text font-bold">{isUrdu ? 'کل سیل وزن' : 'Total Sale Wt'}</span>
+                  <Scale size={16} />
+                </div>
+                <div className="text-2xl font-black font-mono text-white">
+                  {salesTotals.weight.toFixed(2)} <span className="text-xs font-normal text-amber-200">g</span>
+                </div>
+                <div className="text-[10px] text-sky-200 urdu-text mt-0.5">
+                  {isUrdu ? 'فروخت شدہ سونے کا وزن' : 'Sold gold weight'}
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between text-sky-300 text-xs mb-1">
+                  <span className="urdu-text font-bold">{isUrdu ? 'کل پالش' : 'Total Polish'}</span>
+                  <Sparkles size={16} />
+                </div>
+                <div className="text-2xl font-black font-mono text-white">
+                  {salesTotals.polish.toFixed(2)} <span className="text-xs font-normal text-sky-200">g</span>
+                </div>
+                <div className="text-[10px] text-sky-200 urdu-text mt-0.5">
+                  {isUrdu ? 'پالش کا مجموعی وزن' : 'Total polish weight'}
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between text-emerald-300 text-xs mb-1">
+                  <span className="urdu-text font-bold">{isUrdu ? 'کل مزدوری' : 'Total Mazdori'}</span>
+                  <Hammer size={16} />
+                </div>
+                <div className="text-2xl font-black font-mono text-white">
+                  Rs. {salesTotals.mazdori.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-sky-200 urdu-text mt-0.5">
+                  {isUrdu ? 'تمام آئٹمز کی مزدوری' : 'Total labor charges'}
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between text-red-300 text-xs mb-1">
+                  <span className="urdu-text font-bold">{isUrdu ? 'کل بقایا' : 'Total Baqaya'}</span>
+                  <AlertCircle size={16} />
+                </div>
+                <div className="text-2xl font-black font-mono text-white">
+                  Rs. {salesTotals.rem.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-sky-200 urdu-text mt-0.5">
+                  {isUrdu ? 'غیر وصول شدہ رقم' : 'Pending balance'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Records List */}
@@ -374,19 +575,45 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
             exit={{ opacity: 0, x: 20 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            {sales?.map((sale) => (
+            {sales?.map((sale) => {
+              const billWeight = (sale.items || []).reduce((sum, item) => item.t >= 0 ? sum + (Number(item.w) || 0) : sum, 0);
+              const billPolish = (sale.items || []).reduce((sum, item) => sum + (Number(item.mk) || 0), 0);
+              const billMazdori = (sale.items || []).reduce((sum, item) => {
+                const mz = item.mz !== undefined ? Number(item.mz) : Math.max(0, Math.round(item.t - (item.w + (item.mk || 0)) * item.r));
+                return sum + mz;
+              }, 0);
+              const isClear = sale.rem <= 0;
+
+              return (
               <div
                 key={sale.id}
-                className="bg-white rounded-xl shadow-sm border border-sky-200 overflow-hidden hover:shadow-md transition-shadow"
+                className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${
+                  isClear ? 'border-emerald-200' : 'border-red-200'
+                }`}
+                style={{ borderTop: `4px solid ${isClear ? '#10b981' : '#ef4444'}` }}
               >
                 <div className="p-5 space-y-3">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
                     <div>
                       <h3 className="text-lg font-bold text-zinc-900 urdu-text">{sale.name}</h3>
                       <p className="text-xs text-zinc-500" dir="ltr">{sale.phone}</p>
                     </div>
-                    <div className="px-2 py-1 bg-sky-50 text-gold-dark rounded text-[10px] font-bold border border-gold-20">
-                      #{sale.id}
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="px-2 py-0.5 bg-sky-50 text-gold-dark rounded text-[10px] font-bold border border-gold-20">
+                        #{sale.id}
+                      </div>
+                      {/* Prominent Baqaya / Clear Label */}
+                      {isClear ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 urdu-text shadow-xs">
+                          <Check size={13} className="stroke-[3] text-emerald-700" />
+                          {isUrdu ? 'صاف' : 'Clear'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-300 urdu-text shadow-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                          {isUrdu ? 'بقایا' : 'Baqaya'}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -408,7 +635,25 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                     </div>
                     <div className="text-right">
                       <span className="text-zinc-500 urdu-text">{t.remainingAmount}: </span>
-                      <span className="font-bold text-red-600">Rs. {sale.rem.toLocaleString()}</span>
+                      <span className={`font-bold ${isClear ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {isClear ? (isUrdu ? '0 (صاف)' : '0 (Clear)') : `Rs. ${sale.rem.toLocaleString()}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Weight, Polish, Mazdori breakdown per bill */}
+                  <div className="grid grid-cols-3 gap-1 p-2 bg-zinc-50 rounded-lg text-[11px] border border-zinc-200 font-mono">
+                    <div className="text-center">
+                      <span className="block text-[9px] text-zinc-500 font-sans urdu-text font-bold">{isUrdu ? 'وزن' : 'Weight'}</span>
+                      <span className="font-bold text-zinc-800">{billWeight.toFixed(2)}g</span>
+                    </div>
+                    <div className="text-center border-x border-zinc-200">
+                      <span className="block text-[9px] text-zinc-500 font-sans urdu-text font-bold">{isUrdu ? 'پالش' : 'Polish'}</span>
+                      <span className="font-bold text-zinc-800">{billPolish.toFixed(2)}g</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="block text-[9px] text-zinc-500 font-sans urdu-text font-bold">{isUrdu ? 'مزدوری' : 'Mazdori'}</span>
+                      <span className="font-bold text-zinc-800">Rs. {billMazdori.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -430,12 +675,34 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                           {sale.items.map((item, idx) => (
                             <div key={idx} className="flex gap-2 items-center p-2 bg-sky-50/50 rounded-lg border border-sky-100/50">
                               {item.img && (
-                                <div 
-                                  onClick={() => setViewImage(item.img!)}
-                                  className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 border border-sky-200 cursor-pointer hover:border-gold hover:scale-105 transition-all"
-                                  title={isUrdu ? "تصویر دیکھیں اور ڈاؤنلوڈ کریں" : "View and Download Image"}
-                                >
-                                  <img src={item.img} alt={item.n} className="w-full h-full object-cover" />
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <div 
+                                    onClick={() => setLightboxData({
+                                      img: item.img!,
+                                      title: `${item.n} (${sale.name})`,
+                                      phone: sale.phone,
+                                      name: sale.name,
+                                      caption: `*${APP_CONFIG.shopNameUrdu}: آئٹم تصویر*\nگاہک: ${sale.name}\nآئٹم: ${item.n}\nوزن: ${item.w}g\nبل نمبر: #${sale.id}\nشکریہ!`
+                                    })}
+                                    className="w-10 h-10 rounded-md overflow-hidden border border-sky-200 cursor-pointer hover:border-gold hover:scale-105 transition-all shadow-xs"
+                                    title={isUrdu ? "تصویر دیکھیں اور ڈاؤنلوڈ کریں" : "View and Download Image"}
+                                  >
+                                    <img src={item.img} alt={item.n} className="w-full h-full object-cover" />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setWhatsappModalData({
+                                      img: item.img!,
+                                      phone: sale.phone,
+                                      name: sale.name,
+                                      caption: `*${APP_CONFIG.shopNameUrdu}: آئٹم تصویر*\nگاہک: ${sale.name}\nآئٹم: ${item.n}\nوزن: ${item.w}g\nبل نمبر: #${sale.id}\nشکریہ!`,
+                                      title: `${item.n} (${sale.name})`
+                                    })}
+                                    className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center shadow-xs"
+                                    title={isUrdu ? 'آئٹم کی تصویر واٹس ایپ کریں' : 'Send item image via WhatsApp'}
+                                  >
+                                    <MessageCircle size={14} />
+                                  </button>
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
@@ -487,9 +754,31 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                     <button
                       onClick={() => shareWhatsApp(sale)}
                       className="p-2 bg-green-600-10 text-green-600 hover:bg-green-600 hover:text-white rounded-lg transition-colors border border-green-600-20"
+                      title={isUrdu ? 'سیل بل میسج واٹس ایپ کریں' : 'Send bill message on WhatsApp'}
                     >
                       <MessageCircle size={16} />
                     </button>
+                    {sale.items?.some(i => i.img) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstImg = sale.items.find(i => i.img);
+                          if (firstImg?.img) {
+                            setWhatsappModalData({
+                              img: firstImg.img,
+                              phone: sale.phone,
+                              name: sale.name,
+                              caption: `*${APP_CONFIG.shopNameUrdu}: محفوظ شدہ تصویر*\nگاہک: ${sale.name}\nآئٹم: ${firstImg.n}\nوزن: ${firstImg.w}g\nبل نمبر: #${sale.id}\nشکریہ!`,
+                              title: `${firstImg.n} (${sale.name})`
+                            });
+                          }
+                        }}
+                        className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors border border-emerald-700/20 shadow-xs flex items-center justify-center"
+                        title={isUrdu ? 'محفوظ شدہ تصویر واٹس ایپ کریں' : 'Send saved picture via WhatsApp'}
+                      >
+                        <Camera size={16} />
+                      </button>
+                    )}
                     <button
                       onClick={() => sale.id && setDeleteId({ id: sale.id, type: 'sale' })}
                       className="p-2 bg-red-100 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors border border-red-200"
@@ -499,7 +788,8 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
             {sales?.length === 0 && <EmptyState lang={lang} />}
           </motion.div>
         ) : (
@@ -550,13 +840,36 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
 
                     <div className="flex items-center gap-2 pt-2">
                     {p.img && (
-                      <button
-                        onClick={() => setViewImage(p.img!)}
-                        className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white rounded-lg transition-colors border border-sky-200"
-                        title={lang === 'ur' ? 'تصویر دیکھیں' : 'View Image'}
-                      >
-                        <Eye size={16} />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setLightboxData({
+                            img: p.img!,
+                            title: isUrdu ? `خریداری سونا (${p.name})` : `Gold Purchase (${p.name})`,
+                            phone: p.phone,
+                            name: p.name,
+                            caption: `*${APP_CONFIG.shopNameUrdu}: خریداری سونا تصویر*\nبیچنے والا: ${p.name}\nوزن: ${p.weight}g\nریٹ: ${p.rate.toLocaleString()}\nکل رقم: Rs. ${p.total.toLocaleString()}\nشکریہ!`
+                          })}
+                          className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white rounded-lg transition-colors border border-sky-200"
+                          title={lang === 'ur' ? 'تصویر دیکھیں' : 'View Image'}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWhatsappModalData({
+                            img: p.img!,
+                            phone: p.phone,
+                            name: p.name,
+                            caption: `*${APP_CONFIG.shopNameUrdu}: خریداری سونا تصویر*\nبیچنے والا: ${p.name}\nوزن: ${p.weight}g\nریٹ: ${p.rate.toLocaleString()}\nکل رقم: Rs. ${p.total.toLocaleString()}\nشکریہ!`,
+                            title: isUrdu ? `خریداری سونا (${p.name})` : `Gold Purchase (${p.name})`
+                          })}
+                          className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors border border-emerald-700/20 shadow-xs flex items-center justify-center"
+                          title={lang === 'ur' ? 'محفوظ شدہ تصویر واٹس ایپ کریں' : 'Send saved picture via WhatsApp'}
+                        >
+                          <Camera size={16} />
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => {

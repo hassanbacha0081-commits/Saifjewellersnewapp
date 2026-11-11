@@ -671,13 +671,13 @@ export function Khaata({ lang }: KhaataProps) {
               <tr>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'تاریخ' : 'Date'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'آئٹم کی تفصیل' : 'Item Detail'}</th>
-                <th className="px-6 py-4 urdu-text text-center">{lang === 'ur' ? 'تصویر' : 'Image'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'پکاۓ' : 'Pakaye'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'مکس وزن' : 'Mix Wazan'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'کاٹ رتی میں' : 'Kaat in Rati'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'آئٹم پاسہ' : 'Item Pasa'}</th>
                 <th className="px-6 py-4 urdu-text">{lang === 'ur' ? 'پاسہ دیا' : 'Pasa Dia'}</th>
                 <th className="px-6 py-4 urdu-text font-bold text-red-600">{lang === 'ur' ? 'ٹوٹل بقایا' : 'Total Baqaya'}</th>
+                <th className="px-6 py-4 urdu-text text-center">{lang === 'ur' ? 'تصویر' : 'Image'}</th>
                 <th className="px-6 py-4 urdu-text text-center">{lang === 'ur' ? 'ایکشن' : 'Actions'}</th>
               </tr>
             </thead>
@@ -686,6 +686,12 @@ export function Khaata({ lang }: KhaataProps) {
                 <tr key={record.id} className="border-b border-zinc-100 hover:bg-sky-50/50 transition-colors cursor-pointer" onClick={() => handleEditEntry(record)}>
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(record.date, lang === 'ur' ? 'ur-PK' : 'en-US')}</td>
                   <td className="px-6 py-4 font-medium text-zinc-900">{record.itemDetail}</td>
+                  <td className="px-6 py-4">{record.pakaye}</td>
+                  <td className="px-6 py-4">{record.mixWazan}</td>
+                  <td className="px-6 py-4">{record.kaatInRati}</td>
+                  <td className="px-6 py-4">{record.itemPasa}</td>
+                  <td className="px-6 py-4">{record.pasaDia}</td>
+                  <td className="px-6 py-4 font-bold text-red-600">{record.totalBaqaya}</td>
                   <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
                     {record.img ? (
                       <button
@@ -700,19 +706,15 @@ export function Khaata({ lang }: KhaataProps) {
                       <span className="text-zinc-300 text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">{record.pakaye}</td>
-                  <td className="px-6 py-4">{record.mixWazan}</td>
-                  <td className="px-6 py-4">{record.kaatInRati}</td>
-                  <td className="px-6 py-4">{record.itemPasa}</td>
-                  <td className="px-6 py-4">{record.pasaDia}</td>
-                  <td className="px-6 py-4 font-bold text-red-600">{record.totalBaqaya}</td>
-                  <td className="px-6 py-4 flex items-center justify-center gap-3" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => handleEditEntry(record)} className="text-zinc-400 hover:text-sky-500 transition-colors p-1.5 hover:bg-sky-50 rounded-lg">
-                      <Edit2 size={18} />
-                    </button>
-                    <button onClick={() => setDeleteEntryId(record.id!)} className="text-zinc-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded-lg">
-                      <Trash2 size={18} />
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => handleEditEntry(record)} className="text-zinc-400 hover:text-sky-500 transition-colors p-1.5 hover:bg-sky-50 rounded-lg" title={lang === 'ur' ? 'ترمیم' : 'Edit'}>
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => setDeleteEntryId(record.id!)} className="text-zinc-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded-lg" title={lang === 'ur' ? 'حذف کریں' : 'Delete'}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -732,7 +734,10 @@ export function Khaata({ lang }: KhaataProps) {
         <ImageLightbox 
           src={lightboxImage} 
           onClose={() => setLightboxImage(null)} 
-          title={lang === 'ur' ? 'کھاتہ تصویر' : 'Khaata Image'}
+          title={lang === 'ur' ? `کھاتہ تصویر: ${selectedAccount?.name || ''}` : `Khaata Image: ${selectedAccount?.name || ''}`}
+          customerName={selectedAccount?.name}
+          phone={selectedAccount?.phone}
+          caption={`*سیف جیولرز: کاریگر کھاتہ تصویر*\nکاریگر: ${selectedAccount?.name || ''}\nفون: ${selectedAccount?.phone || ''}`}
         />
       )}
     </div>

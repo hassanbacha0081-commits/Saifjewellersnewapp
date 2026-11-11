@@ -213,6 +213,7 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
         mk: formData.iMk,
         r: formData.iRate,
         t: (formData.iWt + formData.iMk) * formData.iRate + formData.iMazdori,
+        mz: formData.iMazdori || 0,
         img: lastImg
       };
       setBillItems([...billItems, newItem]);
