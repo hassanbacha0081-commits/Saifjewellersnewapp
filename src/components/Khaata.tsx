@@ -31,6 +31,9 @@ export function Khaata({ lang }: KhaataProps) {
   // Account List View
   const accounts = useLiveQuery(() => db.khaataAccounts.orderBy('name').toArray());
   const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [editAccountId, setEditAccountId] = useState<number | null>(null);
+  const [isEditingSelectedAccount, setIsEditingSelectedAccount] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [accountFormData, setAccountFormData] = useState({ name: '', phone: '' });
 
   // Entries View
@@ -69,14 +72,53 @@ export function Khaata({ lang }: KhaataProps) {
 
   // --- Account Handlers ---
   const handleSaveAccount = async () => {
-    if (!accountFormData.name) return alert(lang === 'ur' ? "نام ضروری ہے!" : "Name is required!");
-    await db.khaataAccounts.add({
-      name: accountFormData.name,
-      phone: accountFormData.phone,
-      createdAt: new Date().toISOString()
-    });
+    const trimmedName = accountFormData.name.trim();
+    const trimmedPhone = accountFormData.phone.trim();
+    if (!trimmedName) {
+      setAccountError(lang === 'ur' ? 'نام / عنوان ضروری ہے!' : 'Name / title is required!');
+      return;
+    }
+    setAccountError(null);
+
+    if (isEditingSelectedAccount && selectedAccountId) {
+      await db.khaataAccounts.update(selectedAccountId, {
+        name: trimmedName,
+        phone: trimmedPhone,
+      });
+      setIsEditingSelectedAccount(false);
+      setAccountFormData({ name: '', phone: '' });
+      return;
+    }
+
+    if (editAccountId !== null) {
+      await db.khaataAccounts.update(editAccountId, {
+        name: trimmedName,
+        phone: trimmedPhone,
+      });
+      setEditAccountId(null);
+    } else {
+      await db.khaataAccounts.add({
+        name: trimmedName,
+        phone: trimmedPhone,
+        createdAt: new Date().toISOString()
+      });
+    }
     setAccountFormData({ name: '', phone: '' });
     setIsAddingAccount(false);
+  };
+
+  const handleEditAccount = (acc: KhaataAccount) => {
+    setEditAccountId(acc.id!);
+    setAccountFormData({ name: acc.name, phone: acc.phone || '' });
+    setAccountError(null);
+    setIsAddingAccount(true);
+  };
+
+  const handleOpenEditSelectedAccount = () => {
+    if (!selectedAccount) return;
+    setAccountFormData({ name: selectedAccount.name, phone: selectedAccount.phone || '' });
+    setAccountError(null);
+    setIsEditingSelectedAccount(true);
   };
 
   const confirmDeleteAccount = async (id: number) => {
@@ -332,7 +374,12 @@ export function Khaata({ lang }: KhaataProps) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-sky-100">
           <h2 className="text-xl font-bold text-sky-900 urdu-text">{lang === 'ur' ? 'کاریگر کھاتہ' : 'Karigar Accounts'}</h2>
           <button 
-            onClick={() => setIsAddingAccount(true)}
+            onClick={() => {
+              setEditAccountId(null);
+              setAccountFormData({ name: '', phone: '' });
+              setAccountError(null);
+              setIsAddingAccount(true);
+            }}
             className="w-full sm:w-auto bg-gold hover:bg-gold-dark text-black px-6 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
           >
             <Plus size={20} />
@@ -343,23 +390,43 @@ export function Khaata({ lang }: KhaataProps) {
         {isAddingAccount && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-sky-100 mb-6">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
-              <h3 className="text-lg font-bold text-sky-900 urdu-text">{lang === 'ur' ? 'کھاتہ شامل کریں' : 'Add Account'}</h3>
-              <button onClick={() => setIsAddingAccount(false)} className="text-zinc-400 hover:text-red-500">
+              <h3 className="text-lg font-bold text-sky-900 urdu-text">
+                {editAccountId !== null
+                  ? (lang === 'ur' ? 'کھاتہ میں ترمیم کریں' : 'Edit Account')
+                  : (lang === 'ur' ? 'کھاتہ شامل کریں' : 'Add Account')}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsAddingAccount(false);
+                  setEditAccountId(null);
+                  setAccountError(null);
+                  setAccountFormData({ name: '', phone: '' });
+                }}
+                className="text-zinc-400 hover:text-red-500"
+              >
                 <X size={24} />
               </button>
             </div>
+            {accountError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm urdu-text">
+                {accountError}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'نام' : 'Name'}:</label>
+                <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'نام / عنوان' : 'Title / Name'}:</label>
                 <input 
                   type="text" 
                   value={accountFormData.name}
-                  onChange={e => setAccountFormData({ ...accountFormData, name: e.target.value })}
+                  onChange={e => {
+                    setAccountFormData({ ...accountFormData, name: e.target.value });
+                    if (accountError) setAccountError(null);
+                  }}
                   className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'فون نمبر' : 'Phone'}:</label>
+                <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'فون نمبر' : 'Contact Number'}:</label>
                 <input 
                   type="text" 
                   value={accountFormData.phone}
@@ -370,7 +437,15 @@ export function Khaata({ lang }: KhaataProps) {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setIsAddingAccount(false)} className="px-6 py-2.5 text-zinc-500 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl font-bold transition-colors">
+              <button
+                onClick={() => {
+                  setIsAddingAccount(false);
+                  setEditAccountId(null);
+                  setAccountError(null);
+                  setAccountFormData({ name: '', phone: '' });
+                }}
+                className="px-6 py-2.5 text-zinc-500 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl font-bold transition-colors"
+              >
                 {lang === 'ur' ? 'منسوخ' : 'Cancel'}
               </button>
               <button onClick={handleSaveAccount} className="px-8 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-sky-200 flex items-center gap-2">
@@ -393,15 +468,28 @@ export function Khaata({ lang }: KhaataProps) {
                   <h3 className="font-bold text-lg text-sky-900 urdu-text">{acc.name}</h3>
                   <p className="text-sm text-zinc-500 font-mono mt-1" dir="ltr">{acc.phone || '---'}</p>
                 </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteAccountId(acc.id!);
-                  }} 
-                  className="text-zinc-300 hover:text-red-500 p-1 rounded-lg"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditAccount(acc);
+                    }} 
+                    className="text-zinc-300 hover:text-sky-600 p-1.5 rounded-lg hover:bg-sky-50 transition-colors"
+                    title={lang === 'ur' ? 'ترمیم' : 'Edit Account'}
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteAccountId(acc.id!);
+                    }} 
+                    className="text-zinc-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                    title={lang === 'ur' ? 'حذف کریں' : 'Delete Account'}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
               <div className="flex justify-end items-center text-sky-600 group-hover:text-gold transition-colors">
                 <span className="text-sm urdu-text mr-2">{lang === 'ur' ? 'کھاتہ کھولیں' : 'Open Account'}</span>
@@ -434,18 +522,39 @@ export function Khaata({ lang }: KhaataProps) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-sky-100">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setSelectedAccountId(null)}
+            onClick={() => {
+              setSelectedAccountId(null);
+              setIsEditingSelectedAccount(false);
+              setAccountError(null);
+            }}
             className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={20} className={lang === 'ur' ? 'rotate-180' : ''} />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-sky-900 urdu-text">
-              {selectedAccount?.name}
-            </h2>
-            <p className="text-xs text-zinc-500 urdu-text">
-              {lang === 'ur' ? 'کاریگر کھاتہ تفصیلات' : 'Karigar Account Details'}
-            </p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-sky-900 urdu-text">
+                {selectedAccount?.name}
+              </h2>
+              <button
+                type="button"
+                onClick={handleOpenEditSelectedAccount}
+                className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
+                title={lang === 'ur' ? 'کھاتہ نام اور نمبر تبدیل کریں' : 'Edit Title & Contact Number'}
+              >
+                <Edit2 size={16} />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
+              <span className="urdu-text">
+                {lang === 'ur' ? 'کاریگر کھاتہ تفصیلات' : 'Karigar Account Details'}
+              </span>
+              {selectedAccount?.phone && (
+                <span className="font-mono text-sky-700 font-medium" dir="ltr">
+                  {selectedAccount.phone}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -485,6 +594,71 @@ export function Khaata({ lang }: KhaataProps) {
           </button>
         </div>
       </div>
+
+      {isEditingSelectedAccount && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-sky-100 mb-6">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 className="text-lg font-bold text-sky-900 urdu-text">
+              {lang === 'ur' ? 'کھاتہ میں ترمیم کریں' : 'Edit Khaata Account'}
+            </h3>
+            <button
+              onClick={() => {
+                setIsEditingSelectedAccount(false);
+                setAccountError(null);
+                setAccountFormData({ name: '', phone: '' });
+              }}
+              className="text-zinc-400 hover:text-red-500"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          {accountError && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm urdu-text">
+              {accountError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'نام / عنوان' : 'Title / Name'}:</label>
+              <input 
+                type="text" 
+                value={accountFormData.name}
+                onChange={e => {
+                  setAccountFormData({ ...accountFormData, name: e.target.value });
+                  if (accountError) setAccountError(null);
+                }}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500 urdu-text">{lang === 'ur' ? 'فون نمبر' : 'Contact Number'}:</label>
+              <input 
+                type="text" 
+                value={accountFormData.phone}
+                onChange={e => setAccountFormData({ ...accountFormData, phone: e.target.value })}
+                className="w-full p-3 bg-white border border-sky-200 rounded-lg outline-none focus:border-gold text-black"
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setIsEditingSelectedAccount(false);
+                setAccountError(null);
+                setAccountFormData({ name: '', phone: '' });
+              }}
+              className="px-6 py-2.5 text-zinc-500 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl font-bold transition-colors"
+            >
+              {lang === 'ur' ? 'منسوخ' : 'Cancel'}
+            </button>
+            <button onClick={handleSaveAccount} className="px-8 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-sky-200 flex items-center gap-2">
+              <Check size={20} />
+              {lang === 'ur' ? 'محفوظ کریں' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {isAddingEntry && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-sky-100 mb-6">
