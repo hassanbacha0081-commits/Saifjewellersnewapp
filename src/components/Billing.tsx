@@ -39,7 +39,8 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
     iMazdori: 0,
     oTotalWt: 0,
     oNetWt: 0,
-    recAmt: 0
+    recAmt: 0,
+    paidToCustomer: 0
   });
 
   const [printData, setPrintData] = useState<{ data: Sale, id: number } | null>(null);
@@ -175,7 +176,8 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
         iMazdori: 0,
         oTotalWt: 0,
         oNetWt: 0,
-        recAmt: editingSale.rec
+        recAmt: editingSale.rec,
+        paidToCustomer: editingSale.paidToCustomer || 0
       });
       setBillItems(editingSale.items);
     }
@@ -196,7 +198,8 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
       iMazdori: 0,
       oTotalWt: 0,
       oNetWt: 0,
-      recAmt: 0
+      recAmt: 0,
+      paidToCustomer: 0
     });
   };
 
@@ -247,7 +250,7 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
   };
 
   const getRemainingAmount = () => {
-    return getGrandTotal() - formData.recAmt;
+    return getGrandTotal() - formData.recAmt + (formData.paidToCustomer || 0);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +274,8 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
       items: [...billItems],
       total: total,
       rec: formData.recAmt,
-      rem: total - formData.recAmt,
+      paidToCustomer: formData.paidToCustomer || 0,
+      rem: total - formData.recAmt + (formData.paidToCustomer || 0),
       date: editingSale ? editingSale.date : formatDate(new Date(), 'ur-PK')
     };
 
@@ -838,6 +842,18 @@ export default function Billing({ lang, editingSale, setEditingSale }: BillingPr
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-gold"></span>
                   </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                <span className="text-orange-800 font-bold urdu-text">{t.paidToCustomer}</span>
+                <div>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formData.paidToCustomer || ''}
+                    onChange={e => setFormData({ ...formData, paidToCustomer: Number(e.target.value) })}
+                    className="w-32 px-4 py-2 bg-white border border-orange-200 rounded-xl text-right font-black text-orange-900 focus:ring-2 focus:ring-orange-400 outline-none"
+                  />
                 </div>
               </div>
               <div className="flex justify-between items-center p-6 bg-gold text-black rounded-3xl shadow-xl shadow-gold/20 border-2 border-white/20">

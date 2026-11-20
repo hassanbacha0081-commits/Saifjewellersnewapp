@@ -247,6 +247,7 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
       `تاریخ: ${data.date}\n` +
       `کل رقم: Rs. ${data.total.toLocaleString()}\n` +
       `وصول شدہ: Rs. ${data.rec.toLocaleString()}\n` +
+      ((data.paidToCustomer || 0) > 0 ? `گاہک کو ادا کی گئی رقم: Rs. ${(data.paidToCustomer || 0).toLocaleString()}\n` : '') +
       `باقی رقم: Rs. ${data.rem.toLocaleString()}\n` +
       `شکریہ!`;
     
@@ -628,11 +629,17 @@ export default function Records({ lang, setActiveSection, setEditingSale }: Reco
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-2 bg-sky-50 rounded-lg text-xs border border-sky-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-sky-50 rounded-lg text-xs border border-sky-100">
                     <div>
                       <span className="text-zinc-500 urdu-text">{t.receivedAmount}: </span>
                       <span className="font-bold text-green-600">Rs. {sale.rec.toLocaleString()}</span>
                     </div>
+                    {(sale.paidToCustomer || 0) > 0 && (
+                      <div>
+                        <span className="text-zinc-500 urdu-text">{t.paidToCustomer}: </span>
+                        <span className="font-bold text-orange-600">Rs. {(sale.paidToCustomer || 0).toLocaleString()}</span>
+                      </div>
+                    )}
                     <div className="text-right">
                       <span className="text-zinc-500 urdu-text">{t.remainingAmount}: </span>
                       <span className={`font-bold ${isClear ? 'text-emerald-600' : 'text-red-600'}`}>

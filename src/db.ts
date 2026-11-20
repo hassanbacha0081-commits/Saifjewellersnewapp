@@ -18,6 +18,7 @@ export interface Sale {
   items: SalesItem[];
   total: number;
   rec: number;
+  paidToCustomer?: number;
   rem: number;
   date: string;
 }

@@ -456,6 +456,10 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                   <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ رقم</th>
                   <td className="font-mono" style={{ padding: '3px 8px' }}>{sale.rec.toLocaleString()}</td>
                 </tr>
+                <tr>
+                  <th className="font-nastaliq" style={{ padding: '3px 8px', color: '#c2410c' }}>گاہک کو ادا کی گئی رقم</th>
+                  <td className="font-mono" style={{ padding: '3px 8px', color: '#c2410c' }}>{(sale.paidToCustomer || 0).toLocaleString()}</td>
+                </tr>
                 <tr className="final-total-row">
                   <th className="font-nastaliq font-black">صاف بقایا</th>
                   <td className="font-black font-mono">{sale.rem.toLocaleString()}</td>
