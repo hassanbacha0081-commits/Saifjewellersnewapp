@@ -492,6 +492,9 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
     if (type === 'order') {
       const order = data as Order;
       const paymentsSum = order.payments.reduce((sum, p) => sum + p.amt, 0);
+      const cashPaymentsSum = order.payments.filter(p => p.type !== 'gold').reduce((sum, p) => sum + p.amt, 0);
+      const goldPaymentsSum = order.payments.filter(p => p.type === 'gold').reduce((sum, p) => sum + p.amt, 0);
+      const goldPaymentsWeight = order.payments.filter(p => p.type === 'gold').reduce((sum, p) => sum + (p.goldWeight || 0), 0);
       const goldAmount = order.goldAmount !== undefined ? order.goldAmount : order.total;
       const mazdori = order.mazdori !== undefined ? order.mazdori : 0;
       const oldGoldMinus = order.oldGoldMinus || 0;
@@ -632,9 +635,20 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                 </tr>
               ) : (
                 order.payments.slice(0, 8).map((p, i) => (
-                  <tr key={i}>
-                    <td className="font-nastaliq" style={{ padding: '3px' }}>قسط {i + 1}</td>
-                    <td className="font-mono font-bold" style={{ padding: '3px' }}>{p.amt.toLocaleString()}</td>
+                  <tr key={i} style={p.type === 'gold' ? { backgroundColor: '#fffbeb' } : undefined}>
+                    <td className="font-nastaliq" style={{ padding: '3px' }}>
+                      {p.type === 'gold'
+                        ? `قسط ${i + 1} (سونا ${p.goldWeight || 0}g)`
+                        : `قسط ${i + 1}`}
+                    </td>
+                    <td className="font-mono font-bold" style={{ padding: '3px', color: p.type === 'gold' ? '#b45309' : undefined }}>
+                      {p.amt.toLocaleString()}
+                      {p.type === 'gold' && p.ratePerGram ? (
+                        <span style={{ display: 'block', fontSize: '10px', fontWeight: 'normal', color: '#78350f' }}>
+                          @{p.ratePerGram.toLocaleString()}/g
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="font-mono" style={{ padding: '3px' }}>{p.date}</td>
                   </tr>
                 ))
@@ -661,10 +675,23 @@ export const PrintReceipt = forwardRef<HTMLDivElement, PrintReceiptProps>(({ typ
                   <th className="font-nastaliq" style={{ padding: '3px 8px' }}>پرانا سونا منہا (-)</th>
                   <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{oldGoldMinus.toLocaleString()}</td>
                 </tr>
-                <tr className="text-green-700">
-                  <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ رقم</th>
-                  <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{paymentsSum.toLocaleString()}</td>
-                </tr>
+                {goldPaymentsSum > 0 ? (
+                  <>
+                    <tr className="text-green-700">
+                      <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ نقد رقم</th>
+                      <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{cashPaymentsSum.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <th className="font-nastaliq" style={{ padding: '3px 8px', color: '#b45309' }}>قسط سونا ({parseFloat(goldPaymentsWeight.toFixed(2))}g)</th>
+                      <td className="font-mono font-bold text-right" style={{ padding: '3px 8px', color: '#b45309' }}>{goldPaymentsSum.toLocaleString()}</td>
+                    </tr>
+                  </>
+                ) : (
+                  <tr className="text-green-700">
+                    <th className="font-nastaliq" style={{ padding: '3px 8px' }}>وصول شدہ رقم</th>
+                    <td className="font-mono font-bold text-right" style={{ padding: '3px 8px' }}>{paymentsSum.toLocaleString()}</td>
+                  </tr>
+                )}
                 <tr className="final-total-row">
                   <th className="font-nastaliq font-black text-right font-bold text-gold-dark" style={{ padding: '5px 10px' }}>صاف بقایا</th>
                   <td className="font-black font-mono text-gold-dark text-right" style={{ padding: '5px 10px' }}>

@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Order, type OrderPayment } from '../db';
 import { translations, type Language } from '../translations';
 import { formatCurrency, formatDate, formatWhatsAppUrl, compressImage } from '../lib/utils';
-import { Plus, Check, Trash2, Camera, RotateCcw, MessageCircle, Printer, X, Download, AlertCircle, Image as ImageIcon, Scale, Sparkles, Hammer, Eye, EyeOff, Filter, Search } from 'lucide-react';
+import { Plus, Check, Trash2, Camera, RotateCcw, MessageCircle, Printer, X, Download, AlertCircle, Image as ImageIcon, Scale, Sparkles, Hammer, Eye, EyeOff, Filter, Search, Coins, Banknote } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
@@ -180,7 +180,12 @@ export default function Orders({ lang }: OrdersProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
   const [qistOrderId, setQistOrderId] = useState<number | null>(null);
+  const [qistType, setQistType] = useState<'cash' | 'gold'>('cash');
   const [qistAmount, setQistAmount] = useState<string>('');
+  const [qistGoldWeight, setQistGoldWeight] = useState<string>('');
+  const [qistRatePerTola, setQistRatePerTola] = useState<string>('');
+  const [qistRatePerGram, setQistRatePerGram] = useState<string>('');
+  const [qistError, setQistError] = useState<string | null>(null);
   const [selectedOrderForQist, setSelectedOrderForQist] = useState<Order | null>(null);
   const [deleteQistIndex, setDeleteQistIndex] = useState<number | null>(null);
 
@@ -258,13 +263,15 @@ export default function Orders({ lang }: OrdersProps) {
   const handleSave = async () => {
     if (!formData.name) return alert(lang === 'ur' ? "نام ضروری ہے!" : "Name is required!");
     
-    let payments = editId ? (await db.orders.get(editId))?.payments || [] : [{ amt: formData.recAmt, date: formatDate(new Date(), 'ur-PK') }];
+    let payments: OrderPayment[] = editId
+      ? (await db.orders.get(editId))?.payments || []
+      : [{ amt: formData.recAmt, date: formatDate(new Date(), 'ur-PK'), type: 'cash' }];
     
     if (editId && payments.length > 0) {
       payments[0] = { ...payments[0], amt: formData.recAmt };
     }
     
-    const paymentsSum = payments.reduce((sum, p) => sum + p.amt, 0);
+    const paymentsSum = payments.reduce((sum: number, p: OrderPayment) => sum + p.amt, 0);
     const goldAmount = Number(formData.goldAmount) || 0;
     const mazdori = Number(formData.mazdori) || 0;
     const oldGoldMinus = Number(formData.oldGoldMinus) || 0;
@@ -401,24 +408,103 @@ export default function Orders({ lang }: OrdersProps) {
     if (order) {
       setSelectedOrderForQist(order);
       setQistOrderId(id);
+      setQistType('cash');
+      setQistAmount('');
+      setQistGoldWeight('');
+      setQistRatePerTola('');
+      setQistRatePerGram('');
+      setQistError(null);
+    }
+  };
+
+  const handleQistTolaRateChange = (val: string) => {
+    setQistRatePerTola(val);
+    setQistError(null);
+    const tola = parseFloat(val);
+    if (!isNaN(tola) && tola > 0) {
+      const gram = Number((tola / 12).toFixed(2));
+      setQistRatePerGram(gram.toString());
+      const wt = parseFloat(qistGoldWeight);
+      if (!isNaN(wt) && wt > 0) {
+        setQistAmount(Math.round(wt * gram).toString());
+      }
+    } else {
+      setQistRatePerGram('');
+      if (!val) setQistAmount('');
+    }
+  };
+
+  const handleQistGramRateChange = (val: string) => {
+    setQistRatePerGram(val);
+    setQistError(null);
+    const gram = parseFloat(val);
+    if (!isNaN(gram) && gram > 0) {
+      const tola = Number((gram * 12).toFixed(2));
+      setQistRatePerTola(tola.toString());
+      const wt = parseFloat(qistGoldWeight);
+      if (!isNaN(wt) && wt > 0) {
+        setQistAmount(Math.round(wt * gram).toString());
+      }
+    } else {
+      setQistRatePerTola('');
+      if (!val) setQistAmount('');
+    }
+  };
+
+  const handleQistGoldWeightChange = (val: string) => {
+    setQistGoldWeight(val);
+    setQistError(null);
+    const wt = parseFloat(val);
+    const gram = parseFloat(qistRatePerGram);
+    if (!isNaN(wt) && wt > 0 && !isNaN(gram) && gram > 0) {
+      setQistAmount(Math.round(wt * gram).toString());
+    } else if (!val) {
       setQistAmount('');
     }
   };
 
   const handleQistSubmit = async () => {
-    if (!qistOrderId || !qistAmount || !selectedOrderForQist) return;
+    if (!qistOrderId || !selectedOrderForQist) return;
+
+    if (qistType === 'gold') {
+      const wt = parseFloat(qistGoldWeight);
+      if (isNaN(wt) || wt <= 0) {
+        setQistError(lang === 'ur' ? 'براہ کرم سونے کا درست وزن درج کریں۔' : 'Please enter a valid gold weight.');
+        return;
+      }
+    }
+
     const amt = parseFloat(qistAmount);
     if (isNaN(amt) || amt <= 0) {
-      alert(lang === 'ur' ? "براہ کرم درست رقم درج کریں۔" : "Please enter a valid amount.");
+      setQistError(lang === 'ur' ? 'براہ کرم درست رقم درج کریں۔' : 'Please enter a valid amount.');
       return;
     }
+
+    const newPayment: OrderPayment = qistType === 'gold'
+      ? {
+          amt,
+          date: formatDate(new Date(), 'ur-PK'),
+          type: 'gold',
+          goldWeight: parseFloat(parseFloat(qistGoldWeight).toFixed(3)),
+          ratePerTola: parseFloat(qistRatePerTola) || undefined,
+          ratePerGram: parseFloat(qistRatePerGram) || undefined,
+        }
+      : {
+          amt,
+          date: formatDate(new Date(), 'ur-PK'),
+          type: 'cash',
+        };
     
-    const newPayments = [...(selectedOrderForQist.payments || []), { amt, date: formatDate(new Date(), 'ur-PK') }];
+    const newPayments = [...(selectedOrderForQist.payments || []), newPayment];
     const newRem = selectedOrderForQist.rem - amt;
     
     await db.orders.update(qistOrderId, { payments: newPayments, rem: newRem });
     setQistOrderId(null);
     setQistAmount('');
+    setQistGoldWeight('');
+    setQistRatePerTola('');
+    setQistRatePerGram('');
+    setQistError(null);
     setSelectedOrderForQist(null);
   };
 
@@ -486,17 +572,19 @@ export default function Orders({ lang }: OrdersProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-sky-200"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden border border-sky-200"
             >
-              <div className="p-4 border-b border-sky-100 bg-sky-50 flex justify-between items-center">
-                <h3 className="text-xl font-bold urdu-text text-gold-dark">قسط کی وصولی (Installment)</h3>
+              <div className="p-4 border-b border-sky-100 bg-sky-50 flex justify-between items-center shrink-0">
+                <h3 className="text-xl font-bold urdu-text text-gold-dark">
+                  {lang === 'ur' ? 'قسط کی وصولی (نقد / سونا)' : 'Installment (Cash / Gold)'}
+                </h3>
                 <button onClick={() => setQistOrderId(null)} className="text-zinc-500 hover:text-gold-dark">
                   <X size={24} />
                 </button>
               </div>
               
-              <div className="p-6 space-y-4">
-                <div className="bg-sky-50 p-4 rounded-xl border border-sky-100">
+              <div className="p-5 space-y-4 overflow-y-auto">
+                <div className="bg-sky-50 p-3.5 rounded-xl border border-sky-100">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-zinc-500 urdu-text">کسٹمر:</span>
                     <span className="font-bold text-zinc-900">{selectedOrderForQist.name}</span>
@@ -511,26 +599,166 @@ export default function Orders({ lang }: OrdersProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-zinc-600 urdu-text">نئی وصول شدہ رقم:</label>
-                  <input 
-                    type="number" 
-                    autoFocus
-                    value={qistAmount}
-                    onChange={e => setQistAmount(e.target.value)}
-                    className="w-full p-4 bg-white border-2 border-sky-200 rounded-xl outline-none focus:border-gold text-2xl font-bold text-center text-black"
-                  />
+                {/* Cash vs Gold Mode Toggle */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-sky-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQistType('cash');
+                      setQistAmount('');
+                      setQistError(null);
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs transition-all urdu-text ${
+                      qistType === 'cash'
+                        ? 'bg-white text-sky-900 shadow-sm'
+                        : 'text-sky-700 hover:bg-white/50'
+                    }`}
+                  >
+                    <Banknote size={16} className="text-emerald-600" />
+                    <span>{lang === 'ur' ? 'پاکستانی روپے (نقد)' : 'PKR Cash'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQistType('gold');
+                      setQistAmount('');
+                      setQistGoldWeight('');
+                      setQistError(null);
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs transition-all urdu-text ${
+                      qistType === 'gold'
+                        ? 'bg-gold text-black shadow-sm'
+                        : 'text-sky-700 hover:bg-white/50'
+                    }`}
+                  >
+                    <Coins size={16} className={qistType === 'gold' ? 'text-black' : 'text-amber-600'} />
+                    <span>{lang === 'ur' ? 'سونا (آج کے ریٹ سے)' : 'Gold (Daily Rate)'}</span>
+                  </button>
                 </div>
+
+                {qistError && (
+                  <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-bold urdu-text">
+                    {qistError}
+                  </div>
+                )}
+
+                {qistType === 'cash' ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-zinc-600 urdu-text">
+                      {lang === 'ur' ? 'نئی وصول شدہ رقم (PKR):' : 'Received Amount (PKR):'}
+                    </label>
+                    <input 
+                      type="number" 
+                      autoFocus
+                      placeholder="0"
+                      value={qistAmount}
+                      onChange={e => {
+                        setQistAmount(e.target.value);
+                        setQistError(null);
+                      }}
+                      className="w-full p-4 bg-white border-2 border-sky-200 rounded-xl outline-none focus:border-gold text-2xl font-bold text-center text-black"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3 bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-zinc-600 urdu-text block">
+                          {lang === 'ur' ? 'آج کا ریٹ فی تولہ:' : "Today's Rate / Tola:"}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder={selectedOrderForQist.pricePerTola || 'e.g. 280000'}
+                          value={qistRatePerTola}
+                          onChange={e => handleQistTolaRateChange(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-amber-300 rounded-lg outline-none focus:border-gold text-sm font-bold text-black text-center"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-zinc-600 urdu-text block">
+                          {lang === 'ur' ? 'ریٹ فی گرام:' : 'Rate / Gram:'}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="0.00"
+                          value={qistRatePerGram}
+                          onChange={e => handleQistGramRateChange(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-amber-300 rounded-lg outline-none focus:border-gold text-sm font-bold text-black text-center"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700 urdu-text block">
+                        {lang === 'ur' ? 'وصول شدہ سونے کا وزن (گرام):' : 'Gold Weight Received (Grams):'}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          autoFocus
+                          placeholder="0.000"
+                          value={qistGoldWeight}
+                          onChange={e => handleQistGoldWeightChange(e.target.value)}
+                          className="w-full p-3 bg-white border-2 border-amber-300 rounded-xl outline-none focus:border-gold text-xl font-black text-center text-black"
+                          dir="ltr"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700">GRAM</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700 urdu-text block">
+                        {lang === 'ur' ? 'ٹوٹل سے کٹوتی رقم (PKR):' : 'Amount Deducted from Total (PKR):'}
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={qistAmount}
+                        onChange={e => {
+                          setQistAmount(e.target.value);
+                          setQistError(null);
+                        }}
+                        className="w-full p-3 bg-white border-2 border-gold rounded-xl outline-none focus:ring-2 focus:ring-gold text-xl font-black text-center text-emerald-700"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {(parseFloat(qistAmount) || 0) > 0 && (
+                  <div className="flex justify-between items-center p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
+                    <span className="font-bold text-emerald-800 urdu-text">
+                      {lang === 'ur' ? 'کٹوتی کے بعد نیا بقایا:' : 'New Remaining Balance:'}
+                    </span>
+                    <span className="font-black text-sm text-emerald-700 font-mono">
+                      {formatCurrency(selectedOrderForQist.rem - (parseFloat(qistAmount) || 0))}
+                    </span>
+                  </div>
+                )}
 
                 {selectedOrderForQist.payments && selectedOrderForQist.payments.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider urdu-text">ادائیگیوں کی تاریخ:</label>
-                    <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
+                    <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
                       {selectedOrderForQist.payments.map((p, i) => (
-                        <div key={i} className="flex justify-between items-center text-xs p-2 bg-sky-50 rounded-lg border border-sky-100 group">
-                          <span className="text-zinc-500">{p.date}</span>
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-green-600">{formatCurrency(p.amt)}</span>
+                        <div key={i} className={`flex justify-between items-center text-xs p-2.5 rounded-lg border group ${p.type === 'gold' ? 'bg-amber-50 border-amber-200' : 'bg-sky-50 border-sky-100'}`}>
+                          <div>
+                            <span className="text-zinc-500 block">{p.date}</span>
+                            {p.type === 'gold' && (
+                              <span className="text-[11px] font-bold text-amber-800 urdu-text">
+                                سونا: {p.goldWeight}g {p.ratePerGram ? `@ ${p.ratePerGram.toLocaleString()}/g` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <span className={`font-bold ${p.type === 'gold' ? 'text-amber-700' : 'text-green-600'}`}>
+                              {formatCurrency(p.amt)}
+                            </span>
                             <button
                               type="button"
                               onClick={() => handleDeleteQist(i)}
@@ -547,7 +775,7 @@ export default function Orders({ lang }: OrdersProps) {
                 )}
               </div>
 
-              <div className="p-4 bg-sky-50 border-t border-sky-100 flex gap-3">
+              <div className="p-4 bg-sky-50 border-t border-sky-100 flex gap-3 shrink-0">
                 <button 
                   onClick={() => setQistOrderId(null)}
                   className="flex-1 py-3 px-4 bg-white border border-sky-200 text-zinc-500 font-bold rounded-xl hover:bg-sky-100 transition-all urdu-text"
@@ -559,7 +787,9 @@ export default function Orders({ lang }: OrdersProps) {
                   disabled={!qistAmount}
                   className="flex-[2] py-3 px-4 bg-gold text-black font-bold rounded-xl hover:bg-gold-light transition-all shadow-lg shadow-gold-20 urdu-text disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  محفوظ کریں
+                  {qistType === 'gold'
+                    ? (lang === 'ur' ? 'سونا قسط محفوظ کریں' : 'Save Gold Installment')
+                    : (lang === 'ur' ? 'محفوظ کریں' : 'Save')}
                 </button>
               </div>
             </motion.div>
@@ -1359,6 +1589,16 @@ export default function Orders({ lang }: OrdersProps) {
                 <span className="text-zinc-500 urdu-text">واپسی:</span>
                 <span className="font-bold text-zinc-700">{order.due}</span>
               </div>
+              {order.payments?.some(p => p.type === 'gold') && (
+                <div className="flex justify-between text-amber-800 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                  <span className="urdu-text text-xs font-bold">
+                    {lang === 'ur' ? 'قسط سونا:' : 'Gold Paid:'}
+                  </span>
+                  <span className="font-bold text-xs font-mono">
+                    {order.payments.filter(p => p.type === 'gold').reduce((s, p) => s + (p.goldWeight || 0), 0).toFixed(2)}g ({formatCurrency(order.payments.filter(p => p.type === 'gold').reduce((s, p) => s + p.amt, 0))})
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-zinc-500 urdu-text">بقایا:</span>
                 <span className="font-bold text-red-600">{formatCurrency(order.rem)}</span>
@@ -1374,9 +1614,10 @@ export default function Orders({ lang }: OrdersProps) {
               </button>
               <button 
                 onClick={() => order.id && updateOrder(order.id)}
-                className="flex-1 p-2 bg-sky-50 text-zinc-600 rounded-lg hover:bg-sky-100 transition-all text-xs font-bold urdu-text border border-sky-100"
+                className="flex-1 p-2 bg-amber-50 text-amber-800 rounded-lg hover:bg-gold hover:text-black transition-all text-xs font-bold urdu-text border border-amber-200"
+                title={lang === 'ur' ? 'نقد یا سونا قسط وصول کریں' : 'Receive Cash or Gold Installment'}
               >
-                قسط
+                قسط / سونا
               </button>
               <button 
                 onClick={() => {
